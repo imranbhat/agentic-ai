@@ -1,0 +1,112 @@
+# Glossary — every term used so far, in plain English
+
+A "look it up fast" reference. Phase READMEs explain the same things with more depth and context — this one is just for "wait, what does X mean again?"
+
+---
+
+## Core LLM mechanics
+
+| Term | Plain English |
+|---|---|
+| **LLM** (Large Language Model) | A program that predicts what text comes next. Trained on huge amounts of text. Claude, GPT, Gemini are LLMs. |
+| **Token** | A small chunk of text the model reads or writes — roughly 4 characters of English. You're billed per token. |
+| **Prompt** | The text you send to the model. The "question" or instruction. |
+| **Message** | A prompt with a role tag. Format: `{"role": "user", "content": "..."}`. |
+| **Role** | Who's speaking: `user` (you), `assistant` (the model), or `system` (background instructions). |
+| **System prompt** | Instructions that frame the conversation. Often "You are a helpful assistant…" — sets the model's behavior. |
+| **API** | The web address where you send your request. Anthropic's API lives at `api.anthropic.com`. |
+| **SDK** | A library (e.g. the `anthropic` Python package) that wraps API calls so you don't write raw HTTP. |
+| **Streaming** | The server sends tokens as it generates them. Like watching a video stream vs waiting for a full download. |
+| **`max_tokens`** | A cap on how much the model is allowed to write back. If hit mid-response, the answer is truncated. |
+| **Context window** | The total tokens (input + output) the model can handle in one call. Claude Haiku 4.5 = 200,000 tokens. |
+| **Temperature** | A knob that controls randomness. 0 = always pick the most likely token. 1 = more variety. We've used the default (~0.7). |
+| **`stop_reason`** | Why the model stopped writing — `end_turn` (finished naturally), `max_tokens` (hit the cap), `tool_use` (called a tool). |
+| **`usage`** | The receipt — `input_tokens` you sent, `output_tokens` it wrote back. Determines cost. |
+
+## Shaping the model's output
+
+| Term | Plain English |
+|---|---|
+| **Structured output** | Getting the model to return JSON instead of prose, so your code can parse it. |
+| **JSON schema** | A description of what your JSON should look like — field names, types, what's required. |
+| **Tool use** | Telling the model "here are functions you can 'call' — describe what you'd pass to them." The model returns a function name + arguments. |
+| **Real tool** (Mode A) | Your code actually runs the function and feeds results back to the model. The basis of agents. |
+| **Fake tool** (Mode B) | You don't run anything. You just keep what the model "passed in" — a trick to force structured output. |
+| **`tool_choice`** | A flag that *forces* the model to call a specific tool. Most reliable way to get JSON. |
+| **Tool call** | The model's response when it picks a tool — contains the tool name + filled-in arguments. |
+
+## Quality assurance
+
+| Term | Plain English |
+|---|---|
+| **Eval** | A test suite for AI. A set of inputs + checks. Tells you if a prompt change made things better or worse. |
+| **Structural check** | A cheap, deterministic check on output shape (e.g. "did it return 5 items?"). Doesn't judge correctness. |
+| **LLM-as-judge** | Using one LLM call to grade another's answer for *meaning* (not just shape). Slower and pricier than structural. |
+| **Pydantic** | A Python library that validates dictionaries against typed schemas. Catches malformed JSON loudly. |
+| **Validation** | Checking that data matches the shape you expect, before downstream code uses it. |
+
+## Search by meaning (Phase 2)
+
+| Term | Plain English |
+|---|---|
+| **Embedding** | A list of numbers (a "vector") representing a piece of text's meaning. Same meaning → similar numbers. |
+| **Vector** | Just a list of numbers. In our case, 384 of them per text. |
+| **Dimension** | How many numbers are in the vector. BGE-small produces 384-dim vectors. |
+| **Cosine similarity** | A number between -1 and 1 telling you how similar two vectors are. 1 = identical meaning, 0 = unrelated. |
+| **Dot product** | Math operation that, when vectors are unit-length, equals cosine similarity. Faster to compute. |
+| **Normalization** (L2 / unit length) | Scaling each vector to length 1. After this, dot product = cosine similarity. |
+| **Top-K retrieval** | "Give me the K most similar items." K is usually 3–10. |
+| **Chunking** | Splitting a long document into smaller passages before embedding. Each passage becomes one vector. |
+| **Vector index** | A bunch of embeddings stored together so you can search them quickly. |
+| **RAG** (Retrieval-Augmented Generation) | Find relevant chunks first, then put them in the prompt so the model can answer using *your* data. |
+
+## Models and providers
+
+| Term | Plain English |
+|---|---|
+| **Provider** | A company that hosts LLMs you can call via API. Anthropic, OpenAI, Google, Voyage. |
+| **Model** | A specific trained system. Within Claude: Haiku (fast/cheap), Sonnet (balanced), Opus (smartest). |
+| **Local model** | Runs on your own computer, no internet, no per-call cost. Slower than API models. We use one for embeddings. |
+| **API model** | Lives on the provider's servers. You pay per token. Faster, smarter, requires internet + key. |
+| **Voyage** | Anthropic's recommended embedding provider. Cloud-based. Free tier exists; we're not using it yet. |
+| **fastembed** | The local embedding library we *are* using. ONNX-based, no PyTorch, cross-platform. |
+
+## Tooling we touched
+
+| Term | Plain English |
+|---|---|
+| **uv** | A modern Python package manager. Replaces pip + virtualenv + pyenv all in one. Much faster. |
+| **`pyproject.toml`** | The Python project's manifest — lists dependencies, Python version, project name. |
+| **`.env`** | A file that holds secrets like API keys. Loaded into environment variables at runtime. |
+| **ONNX runtime** | A library that runs ML models without needing PyTorch. Smaller, more portable. |
+| **PyTorch** | A heavy ML library. Powerful but big. Recently dropped Intel Mac support — that's why we switched to ONNX. |
+| **Hugging Face** | A platform for downloading ML models. The BGE embedding model lives there. |
+| **CLAUDE.md** | A project file that documents rules for AI agents working in the repo. Auto-loaded into Claude Code sessions. |
+| **Hook** | A shell command Claude Code runs automatically on certain events (e.g. after a file edit). |
+| **Skill** (in Claude Code) | A reusable instruction module Claude can invoke — like `/init` or `/review`. |
+
+## Acronyms cheat sheet
+
+| Acronym | Means | First-time meaning |
+|---|---|---|
+| **LLM** | Large Language Model | The model itself (Claude, GPT, Gemini). |
+| **API** | Application Programming Interface | The HTTP endpoint your code talks to. |
+| **SDK** | Software Development Kit | The library that wraps the API. |
+| **JSON** | JavaScript Object Notation | The text format used for structured data. |
+| **HTTP / HTTPS** | (Secure) HyperText Transfer Protocol | How browsers and APIs talk over the internet. |
+| **CLI** | Command-Line Interface | A program you run from the terminal (no GUI). |
+| **RAG** | Retrieval-Augmented Generation | Find relevant context, then generate. |
+| **ONNX** | Open Neural Network Exchange | A model format usable without PyTorch. |
+| **MCP** | Model Context Protocol | An emerging standard for connecting agents to tools (Phase 5). |
+| **TDD** | Test-Driven Development | Write tests first, then code. |
+| **CI/CD** | Continuous Integration / Continuous Deployment | Automated build & deploy pipelines. |
+
+## Quick "which is which?"
+
+- **Token vs character vs word** — Token is the model's unit (~4 chars), character is one letter, word is what humans count. Models think in tokens.
+- **Prompt vs message vs conversation** — A *prompt* is text. A *message* is a prompt + role tag. A *conversation* is a list of messages.
+- **API vs SDK** — The API is the destination. The SDK is the helper library to reach it.
+- **Tool use vs structured output** — Same mechanism. Tool use *is* the API. Structured output is one thing you can do *with* it.
+- **Eval vs unit test** — A unit test checks deterministic code. An eval scores LLM output, which is non-deterministic by nature.
+- **Embedding vs prompt** — A prompt asks the model to generate. An embedding asks the model to summarize meaning into numbers. Different endpoints, different costs.
+- **Local model vs API model** — Local runs on your CPU (free, slow, basic). API runs in the cloud (paid, fast, smart). For embeddings local is fine; for generation you want API.
