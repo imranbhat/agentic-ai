@@ -1,0 +1,21 @@
+[project]
+name = "learn-ai"
+version = "0.1.0"
+description = "Hands-on agentic AI learning workspace"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.40.0",
+    "pydantic>=2.6.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.7.0",
+    # Phase 2 — embeddings + numerical tools
+    # fastembed uses ONNX runtime (no PyTorch). Smaller install,
+    # cross-platform incl. Intel Mac. Same BGE models under the hood.
+    # onnxruntime pinned <1.20 because newer versions dropped Intel Mac wheels.
+    "fastembed>=0.4.0,<0.6.0",
+    "onnxruntime<1.20",
+    "numpy>=1.26.0",
+]
+
+[dependency-groups]
+dev = []

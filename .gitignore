@@ -1,0 +1,10 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.uv/
+*.log
+
+# Claude Code per-user local settings (project-wide settings.json is tracked)
+.claude/settings.local.json
