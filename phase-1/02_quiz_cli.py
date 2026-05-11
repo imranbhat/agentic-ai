@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, ValidationError
 from rich.console import Console
 from rich.panel import Panel
 
-load_dotenv()
+load_dotenv(override=True)  # Why: shell may have ANTHROPIC_API_KEY="" set; .env wins.
 console = Console()
 
 

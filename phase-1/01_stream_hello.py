@@ -15,7 +15,7 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 from rich.console import Console
 
-load_dotenv()
+load_dotenv(override=True)  # Why: shell may have ANTHROPIC_API_KEY="" set; .env wins.
 console = Console()
 
 client = Anthropic()  # picks up ANTHROPIC_API_KEY from env

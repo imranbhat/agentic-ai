@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
-load_dotenv()
+load_dotenv(override=True)  # Why: shell may have ANTHROPIC_API_KEY="" set; .env wins.
 console = Console()
 
 # Prices per 1M tokens (input / output). Update from console.anthropic.com/pricing.

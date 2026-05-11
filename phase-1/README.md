@@ -157,6 +157,7 @@ Every agent system you'll ever build is a longer chain of these same eight links
 1. **Truncated structured output is silent.** If `max_tokens` is too low and the model is mid-JSON, you get a "successful" response with broken JSON. Detect by checking `response.stop_reason == "max_tokens"` and erroring loudly.
 2. **Eval scoreboards lie if you let them.** Errored runs that contribute `0/0` to the score inflate the headline percentage. Decide your error-counting policy *before* you trust the number.
 3. **Mix difficulty in your eval set.** All easy topics will mask `max_tokens`-class bugs that only appear under load. Our hard topic ("Bayesian vs frequentist") is the only one that caught the bug.
+4. **`load_dotenv()` doesn't override existing env vars by default.** If something in your shell sets `ANTHROPIC_API_KEY=""` (an empty string — not unset, *empty*), `dotenv` silently respects it and your script fails auth even though `.env` has a valid key. The fix: `load_dotenv(override=True)` in any script that reads from `.env`. **Lesson: silent precedence rules cause more debugging pain than loud errors.**
 
 ---
 
