@@ -25,8 +25,8 @@ Each phase has its own README with run order, concepts, and gotchas.
 | Phase | Focus | Status |
 |---|---|---|
 | [Phase 1](phase-1/README.md) | LLM mental model — tokens, streaming, tool use, structured output, evals | ✅ shipped |
-| [Phase 2](phase-2/README.md) | Application primitives — embeddings, RAG, prompt caching, LLM-as-judge | 🚧 in progress |
-| Phase 3 | Build agents from scratch | — |
+| [Phase 2](phase-2/README.md) | Application primitives — embeddings, RAG, prompt caching, LLM-as-judge | ✅ shipped |
+| Phase 3 | Build agents from scratch | 🔜 next |
 | Phase 4 | Frameworks and patterns | — |
 | Phase 5 | Production-grade agents | — |
 | Phase 6 | Frontiers (computer use, browser agents, voice, fine-tuning) | — |
@@ -46,13 +46,22 @@ learn-ai/
 ├── CLAUDE.md             # rules for AI agents working in this repo
 ├── pyproject.toml        # uv-managed Python project
 ├── .env.example          # template for ANTHROPIC_API_KEY
-├── phase-1/              # ✅ done
-│   ├── README.md         #    phase 1 run order + concepts reference
+├── phase-1/              # ✅ done — LLM mental model
+│   ├── README.md         #    run order + 8 core concepts + gotchas
 │   ├── 00_count_tokens.py
 │   ├── 01_stream_hello.py
-│   ├── 02_quiz_cli.py
+│   ├── 02_quiz_cli.py    #    ship: forced tool use → structured JSON
 │   └── evals/
-└── phase-2/              # 🚧 in progress
-    ├── README.md         #    phase 2 run order + new concepts
-    └── 01_embeddings.py
+│       ├── eval_quiz.py  #    structural eval
+│       └── topics.jsonl
+└── phase-2/              # ✅ done — RAG, embeddings, caching, LLM-as-judge
+    ├── README.md         #    run order + 8 new concepts + two RAG patterns
+    ├── 01_embeddings.py  #    embedding basics + similarity
+    ├── 02_build_index.py #    chunk + embed corpus → disk
+    ├── 03_retrieve.py    #    top-K semantic search
+    ├── 04_rag_chat.py    #    ship #1: vector-search RAG (cited, grounded)
+    ├── 05_with_caching.py #   ship #2: cached-context RAG
+    └── evals/
+        ├── eval_rag.py   #    LLM-as-judge across retrieval/gen/refusal
+        └── eval_set.jsonl
 ```
