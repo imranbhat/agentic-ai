@@ -57,6 +57,8 @@ texts = [
     "I enjoy writing code",                  # related to programming
     "The bank approved my loan",             # bank = financial
     "We sat on the river bank at sunset",    # bank = geography
+    "My on that talks about LLMs abd Vectors",
+    "Fake tools as a structuring trick",
 ]
 
 embeddings = embed(texts)
