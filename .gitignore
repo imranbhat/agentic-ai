@@ -8,3 +8,6 @@ __pycache__/
 
 # Claude Code per-user local settings (project-wide settings.json is tracked)
 .claude/settings.local.json
+
+# Phase 2 — vector indexes are derived from the .md source files
+phase-2/index/
