@@ -26,7 +26,7 @@ Each phase has its own README with run order, concepts, and gotchas.
 |---|---|---|
 | [Phase 1](phase-1/README.md) | LLM mental model — tokens, streaming, tool use, structured output, evals | ✅ shipped |
 | [Phase 2](phase-2/README.md) | Application primitives — embeddings, RAG, prompt caching, LLM-as-judge | ✅ shipped |
-| Phase 3 | Build agents from scratch | 🔜 next |
+| [Phase 3](phase-3/README.md) | Build agents from scratch — the loop, tools, research agent | 🚧 in progress |
 | Phase 4 | Frameworks and patterns | — |
 | Phase 5 | Production-grade agents | — |
 | Phase 6 | Frontiers (computer use, browser agents, voice, fine-tuning) | — |
