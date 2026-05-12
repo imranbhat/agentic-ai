@@ -15,12 +15,31 @@ That's it. Everything else — ReAct, planning, multi-agent, MCP — is variatio
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 
-# Exercise 1 — feel the loop with trivial math tools
+# Exercise 1 ✅ — feel the loop with trivial math tools
 uv run phase-3/01_agent_loop_minimal.py
 uv run phase-3/01_agent_loop_minimal.py "What is 17 squared minus 9?"
 
-# 02-05 + eval come in subsequent turns
+# Exercise 2 ✅ — robust loop: 3 tools, system prompt, error recovery, cost tracking
+uv run phase-3/02_agent_loop_robust.py "What's 2+2*3 and how many words in 'the quick brown fox'?"
+uv run phase-3/02_agent_loop_robust.py "What is 10 divided by 0?"        # error recovery demo
+uv run phase-3/02_agent_loop_robust.py "Hello!"                           # zero-tool case
+uv run phase-3/02_agent_loop_robust.py "compute (2+3)*(4+5)" --trace      # full conversation dump
+
+# 03-05 + eval come in subsequent turns
 ```
+
+## What Exercise 2 adds on top of Exercise 1
+
+Same loop, more instrumentation — the bits production agents need:
+
+| Addition | Why it matters |
+|---|---|
+| **3 tools** (calculator, get_current_time, word_count) | Forces the model to *choose*. Tool selection is where the real intelligence lives. |
+| **System prompt** | Carries the agent's rules (use tools when they help, recover from errors, don't over-call). |
+| **Error recovery** | Tool exceptions round-trip back to the model as `ERROR: ...` strings — the model can recognize the failure and adapt. |
+| **Cost tracking** | Per-iteration tokens + running dollar total. Agents add up fast. |
+| **Unknown-tool guard** | If the model hallucinates a tool name, return an error instead of crashing on KeyError. |
+| **`--trace` mode** | Dumps the full messages list at the end. The single best debugging tool when an agent goes sideways. |
 
 ## The 8 new concepts (added to Phase 1+2's 16)
 
