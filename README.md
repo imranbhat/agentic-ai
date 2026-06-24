@@ -26,7 +26,7 @@ Each phase has its own README with run order, concepts, and gotchas.
 |---|---|---|
 | [Phase 1](phase-1/README.md) | LLM mental model — tokens, streaming, tool use, structured output, evals | ✅ shipped |
 | [Phase 2](phase-2/README.md) | Application primitives — embeddings, RAG, prompt caching, LLM-as-judge | ✅ shipped |
-| [Phase 3](phase-3/README.md) | Build agents from scratch — the loop, tools, research agent | 🚧 in progress |
+| [Phase 3](phase-3/README.md) | Build agents from scratch — the loop, tools, research agent | 🚧 in progress (4/6) |
 | Phase 4 | Frameworks and patterns | — |
 | Phase 5 | Production-grade agents | — |
 | Phase 6 | Frontiers (computer use, browser agents, voice, fine-tuning) | — |
@@ -54,14 +54,21 @@ learn-ai/
 │   └── evals/
 │       ├── eval_quiz.py  #    structural eval
 │       └── topics.jsonl
-└── phase-2/              # ✅ done — RAG, embeddings, caching, LLM-as-judge
-    ├── README.md         #    run order + 8 new concepts + two RAG patterns
-    ├── 01_embeddings.py  #    embedding basics + similarity
-    ├── 02_build_index.py #    chunk + embed corpus → disk
-    ├── 03_retrieve.py    #    top-K semantic search
-    ├── 04_rag_chat.py    #    ship #1: vector-search RAG (cited, grounded)
-    ├── 05_with_caching.py #   ship #2: cached-context RAG
-    └── evals/
-        ├── eval_rag.py   #    LLM-as-judge across retrieval/gen/refusal
-        └── eval_set.jsonl
+├── phase-2/              # ✅ done — RAG, embeddings, caching, LLM-as-judge
+│   ├── README.md         #    run order + 8 new concepts + two RAG patterns
+│   ├── 01_embeddings.py  #    embedding basics + similarity
+│   ├── 02_build_index.py #    chunk + embed corpus → disk
+│   ├── 03_retrieve.py    #    top-K semantic search
+│   ├── 04_rag_chat.py    #    ship #1: vector-search RAG (cited, grounded)
+│   ├── 05_with_caching.py #   ship #2: cached-context RAG
+│   └── evals/
+│       ├── eval_rag.py   #    LLM-as-judge across retrieval/gen/refusal
+│       └── eval_set.jsonl
+└── phase-3/              # 🚧 in progress (4/6) — agents from scratch
+    ├── README.md         #    run order + 8 new concepts + ReAct/critique notes
+    ├── 01_agent_loop_minimal.py  # the bare while-loop
+    ├── 02_agent_loop_robust.py   # 3 tools, error recovery, cost, --trace
+    ├── 03_agent_loop_react.py    # ReAct: Thought → Action → Observation
+    └── 04_self_critique.py       # generate → critique → revise (Reflexion)
+    #   05_research_agent.py (ship) + evals/ — pending
 ```

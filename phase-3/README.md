@@ -4,6 +4,17 @@
 
 **Ship deliverable:** a research agent in ~200 lines of pure Python, no framework. Tools: web search, fetch URL, write file. Input: a question. Output: a cited markdown report.
 
+## Progress — 4 of 6 (🚧 in progress)
+
+| # | Deliverable | Status |
+|---|---|---|
+| 01 | [`01_agent_loop_minimal.py`](01_agent_loop_minimal.py) — the bare `while` loop | ✅ shipped |
+| 02 | [`02_agent_loop_robust.py`](02_agent_loop_robust.py) — 3 tools, error recovery, cost tracking, `--trace` | ✅ shipped |
+| 03 | [`03_agent_loop_react.py`](03_agent_loop_react.py) — ReAct (Thought → Action → Observation) | ✅ shipped |
+| 04 | [`04_self_critique.py`](04_self_critique.py) — generate → critique → revise (Reflexion) | ✅ shipped |
+| 05 | `05_research_agent.py` — **the ship**: web search + fetch + write file → cited report | ⏳ next |
+| — | `evals/` — Phase 3 eval | ⏳ pending |
+
 ## What is an agent (in one paragraph)
 
 An **agent** is an LLM call wrapped in a `while` loop. Each iteration: the model sees the conversation so far plus a list of tools it can call. It either replies with text (done) or asks to call a tool. Your code runs the tool, appends the result to the conversation, and loops. The loop ends when the model stops asking for tools.
