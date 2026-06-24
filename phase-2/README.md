@@ -139,6 +139,48 @@ Two API mechanics worth noting:
 
 The chunker in `02_build_index.py` is intentionally simple: split on paragraph boundaries, greedy-pack toward ~500 chars. **Chunking strategy is one of the biggest levers in RAG quality.** Once retrieval works, come back and try smarter splitters (markdown-aware, semantic, recursive character) and watch the eval score move.
 
+## Embedding vs vector — same object, two lenses
+
+These two words trip everyone up because they get used interchangeably. They're not different things — the relationship is exactly like:
+
+> A **price** is a **number**.
+
+Every price is a number, but not every number is a price. A number *becomes* a price when it's used to represent the cost of something.
+
+| Term | What it is | Example |
+|---|---|---|
+| **Vector** | The data structure — a list of numbers | `[0.13, -0.42, 0.07, ..., 0.91]` (384 floats) |
+| **Embedding** | The *purpose* — that vector represents the meaning of some text | The 384 numbers above represent `"the quick brown fox"` |
+
+So when `phase-2/index/embeddings.npy` has shape `(81, 384)`, that's **81 vectors**, each a **384-dim embedding** (because the chosen embedding model outputs 384 numbers per text). Print one row and you see a plain list of floats — that's the vector. Calling it an "embedding" is shorthand for *"this vector was produced by an embedding model and represents text meaning."*
+
+**Why it works:** the model is trained so that texts with similar meaning produce vectors pointing in similar directions in 384-dim space. That's all cosine similarity is asking — *"do these two vectors point the same way?"*
+
+## What chunking actually does and why we need it
+
+A doc might be 20,000 characters. Two problems with embedding it whole:
+
+1. **Hard limit.** Embedding models cap input (typically ~512 tokens ≈ 2,000 chars). Bigger docs get truncated.
+2. **Soft limit, much worse.** Even if it fits, *one vector cannot represent a doc that covers multiple topics*. If your doc has sections on tokens, RAG, and evals, you get one averaged vector that's mediocre at matching any of them — and worse at all of them than three focused vectors would be.
+
+Chunking splits one long doc into many small passages (~500 chars each), embedding each separately:
+
+```
+docs/notes.md (20,000 chars)
+        │
+        │ chunker (split on paragraph breaks, greedy-pack to ~500 chars)
+        ▼
+chunk 0: "Tokens are how models read text..."  →  embed  →  vector_0
+chunk 1: "Cosine similarity is just a dot..."  →  embed  →  vector_1
+chunk 2: "RAG stuffs retrieved passages..."    →  embed  →  vector_2
+...
+chunk 80: "Evals catch prompt regressions..."   →  embed  →  vector_80
+```
+
+Now at query time *"what is cosine similarity?"* embeds, compares against all 81 chunk vectors, and `chunk_1` lights up. You retrieve **just that passage**, not the whole 20,000-char doc.
+
+That's the whole pipeline. The chunker in `02_build_index.py` is intentionally naive (paragraph-split + greedy-pack); upgrading it is one of the highest-leverage things you can do — see "Chunking is a real lever" below.
+
 ## What's different from Phase 1
 
 - **First non-Anthropic dependency.** sentence-transformers runs locally — no API key, no per-call cost. Embeddings will use your CPU and a ~130MB model cached in `~/.cache/huggingface`.
