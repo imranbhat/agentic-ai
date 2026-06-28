@@ -1,6 +1,6 @@
 # learn-ai — Full Chat Transcript
 
-A reconstructed record of the conversations that built this project, from Phase 1 setup through Phase 3 Exercise 4 (the self-critique loop).
+A reconstructed record of the conversations that built this project, from Phase 1 setup through Phase 3 complete (the research agent and its eval — all 6 deliverables shipped).
 
 **Note on faithfulness:** User messages are verbatim. Assistant responses are reconstructed from working memory — accurate in substance but the exact wording of long passages may differ slightly from what was originally written. Tool calls (bash commands, file writes, etc.) are summarized where relevant; the full output isn't reproduced. For the canonical artifacts, see the files in the repo.
 
@@ -858,31 +858,95 @@ Brought this transcript current through Exercise 4 and the commits/push (this se
 
 ---
 
+## The progress rule becomes law
+
+**User:**
+> you haven't updated the readme file with the progress so far.... i want this to be rule
+
+**Assistant:**
+Checked state and found the user was right: the root README's project-structure tree still ended at phase-2 (phase-3's four files were invisible), and the status was a vague "in progress" with no count. Fixed all of it AND codified it so it can't recur:
+
+- Added a `## Progress` table to `phase-3/README.md` (at-a-glance ✅/⏳ per deliverable).
+- Root README: status → `🚧 in progress (4/6)`; structure tree extended with the phase-3 files.
+- **CLAUDE.md:** added "The progress rule" — in the SAME turn progress changes, update all three of (phase `## Progress` block, root status table with the X/Y count, root structure tree). Marked non-negotiable.
+- Saved a cross-session memory so the directive persists outside this repo.
+
+Why CLAUDE.md and not a hook: a hook can't do a *semantic* README update (it can't know "we just shipped an exercise"). That needs the agent's judgment, so a rule is the right mechanism. Committed + pushed.
+
+---
+
+## Phase 3 Exercise 5 — the ship: a research agent
+
+**User:**
+> start exercise 05, but walk me through each step and explain while running and show and explain the output to me
+
+**Assistant:**
+Built the Phase 3 deliverable: `phase-3/05_research_agent.py`, ~200 lines, no framework. Same loop as Exercise 2; three REAL tools:
+
+- `web_search(query)` — DuckDuckGo via `ddgs` (no API key). Flagged as a non-Anthropic dependency per the Anthropic-first rule; production swaps in Tavily/Brave/Exa via a one-function change.
+- `fetch_url(url)` — httpx + BeautifulSoup, output **capped at 6,000 chars**. Bounded tool output is the #1 cost lever — every returned char becomes an input token on every later turn.
+- `write_file(name, content)` — writes to `phase-3/reports/`, `basename()`-sanitized so the model can't escape the directory.
+
+Walked through it in steps: added deps (`ddgs`, `beautifulsoup4`) and probed each tool's real API in isolation BEFORE wiring the loop — which caught the ddgs result shape (`{title, href, body}`) and showed a raw page going 181k → 13k chars after cleaning (still ~3.5k tokens — hence the cap).
+
+Ran it on "What is the ReAct prompting pattern and who introduced it?": 4 iterations, 6 tool calls (2 search, 3 fetch, 1 write), **$0.0184**, producing an accurate cited report. The key observation: input tokens climbed 1106 → 7384 across turns because the conversation only accumulates — the fetched pages are what spike it. Committed as two commits (feat + docs) and pushed.
+
+---
+
+## Track the reports, don't ignore them
+
+**User:**
+> don't ignore the reports, push them also
+
+**Assistant:**
+Reversed the earlier decision to gitignore `phase-3/reports/`. Dropped the ignore rule, checked in the sample report, and updated both READMEs from "gitignored" to "checked in as sample output". Committed + pushed. Heads-up given: every future run now writes a `.md` there that shows in `git status`.
+
+---
+
+## Phase 3 Exercise 6 — evaluating the agent (phase finale)
+
+**User:**
+> yes and explain and show me the what, why and how of evals clearly
+
+**Assistant:**
+Taught evals first: an eval is a repeatable, scored test suite for non-deterministic output. The Phase 3 twist vs Phase 1/2 — an agent is judged on its **trajectory** (the tool-call sequence), not just its final output, because that's where agent-specific failures hide (hallucinated citations, wrong tool order, runaway loops, silent non-completion). And since agents are non-deterministic, one good run proves nothing — you measure across a set.
+
+Built `phase-3/evals/eval_research.py` scoring five dimensions, cheap-deterministic first, LLM-judge last:
+1. completed · 2. trajectory_ok (search→fetch→write, under budget) · 3. citations_grounded (every cited URL was actually fetched — the hallucination catch) · 4. contains_expected (known fact present) · 5. answers_question (Sonnet 1-5).
+
+This required a small but important refactor: `run_agent` now RETURNS its trajectory dict (tools_called, fetched_urls, report_content, cost) and takes a `quiet` flag — "an agent you can't inspect, you can't test." The grounded check is only possible because of it.
+
+Ran it: Haiku agent, Sonnet judge, 3 questions → **3/3 passed, avg answers 4.7/5, $0.0545**. Noted the honest caveat: a clean pass is not a victory — a load-bearing eval should occasionally bite, so the next step is adversarial cases. Updated all the progress markers (Phase 3 → ✅ 6/6 complete, Phase 4 → next).
+
+---
+
 ## Where we stand
 
 ```
 phase-1/   ✅ done    — LLM mental model (4 scripts + structural eval)
 phase-2/   ✅ done    — RAG primitives (5 scripts + LLM-as-judge eval)
-phase-3/   🚧 67%    — agents from scratch (4 of 6 exercises shipped)
-phase-4/   ⏳ next   — frameworks and patterns
+phase-3/   ✅ done    — agents from scratch (6 of 6 deliverables shipped)
+phase-4/   🔜 next   — frameworks and patterns
 phase-5/   ⏳ later  — production-grade
 phase-6/   ⏳ later  — frontiers
 ```
 
-**Concepts internalized:** 20 (8 Phase 1 + 8 Phase 2 + 4 Phase 3 so far — incl. ReAct and self-critique)
+**Concepts internalized:** 24 (8 Phase 1 + 8 Phase 2 + 8 Phase 3 — the agent loop through ReAct, self-critique, real tools, and agent evaluation)
 
-**Ship deliverables built:** 4 (Phase 3 ship — research agent — still pending)
+**Ship deliverables built:** 5
 - Phase 1: structured-output quiz CLI
 - Phase 2: vector-search RAG chatbot
 - Phase 2: cached-context RAG chatbot
+- Phase 3: research agent (web_search + fetch_url + write_file → cited report)
+- Phase 3: agent eval (5-dimension trajectory + output scoring)
 
-**Phase 3 exercises shipped:** 4 of 6
+**Phase 3 exercises shipped:** 6 of 6 ✅
 1. `01_agent_loop_minimal.py` — the bare loop
 2. `02_agent_loop_robust.py` — 3 tools, error recovery, cost tracking, `--trace`
 3. `03_agent_loop_react.py` — ReAct (Thought → Action → Observation)
 4. `04_self_critique.py` — generate → critique → revise (Reflexion)
-5. `05_*` research agent — the ship (pending; web search provider TBD)
-6. `evals/` — Phase 3 eval (pending)
+5. `05_research_agent.py` — the ship: real tools → cited markdown report
+6. `evals/eval_research.py` — eval on trajectory + grounded citations + judge
 
 **War stories survived:** 8
 1. Max plan ≠ API credits
@@ -894,7 +958,7 @@ phase-6/   ⏳ later  — frontiers
 7. Synthesis needs its own iteration (the Q5 lesson)
 8. Agents are non-deterministic — same query gave a 1-iteration and a 2-iteration trace on different runs (why a one-off trace proves nothing)
 
-**Repo:** https://github.com/imranbhat/agentic-ai (private). 26 commits on main (this chat.md update will follow), in sync with remote.
+**Repo:** https://github.com/imranbhat/agentic-ai (private). ~30 commits on main, in sync with remote.
 
 ---
 
@@ -917,5 +981,9 @@ A few patterns from this conversation that mattered:
 7. **Anthropic-first, drift labeled.** When we used fastembed instead of Voyage (Anthropic's recommended), we said so explicitly. No quiet drift.
 
 8. **Diff-based exercises.** Exercises 03 (ReAct) and 04 (self-critique) were each built as a *tight diff* over the previous file — same loop, minimal change — so the new lesson is isolated and visible. The takeaway lands harder when you can see exactly what moved: ReAct is "only the system prompt + display changed," and self-critique is "only the tool changed, from a Python function to another LLM call." The loop skeleton never moves.
+
+9. **Make the system return data, not just print.** The Phase 3 eval was only possible because `run_agent` was refactored to *return its trajectory* (tools called, URLs fetched, the report) instead of only printing to the console. "An agent you can't inspect, you can't test" — testability is a design property you build in, and the grounded-citations check (real vs hallucinated sources) is invisible without it.
+
+10. **Eval the process, not just the output.** Phase 1/2 evals scored a single artifact. An agent eval scores the *trajectory* — did it use tools in a sane order, stay in budget, cite only what it fetched. The most valuable check (grounded citations) is one you can't get by reading the final report; you need the sequence of actions.
 
 That's the project so far.
