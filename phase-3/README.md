@@ -4,7 +4,7 @@
 
 **Ship deliverable:** a research agent in ~200 lines of pure Python, no framework. Tools: web search, fetch URL, write file. Input: a question. Output: a cited markdown report.
 
-## Progress — 4 of 6 (🚧 in progress)
+## Progress — 5 of 6 (🚧 in progress)
 
 | # | Deliverable | Status |
 |---|---|---|
@@ -12,8 +12,8 @@
 | 02 | [`02_agent_loop_robust.py`](02_agent_loop_robust.py) — 3 tools, error recovery, cost tracking, `--trace` | ✅ shipped |
 | 03 | [`03_agent_loop_react.py`](03_agent_loop_react.py) — ReAct (Thought → Action → Observation) | ✅ shipped |
 | 04 | [`04_self_critique.py`](04_self_critique.py) — generate → critique → revise (Reflexion) | ✅ shipped |
-| 05 | `05_research_agent.py` — **the ship**: web search + fetch + write file → cited report | ⏳ next |
-| — | `evals/` — Phase 3 eval | ⏳ pending |
+| 05 | [`05_research_agent.py`](05_research_agent.py) — **the ship**: web search + fetch + write file → cited report | ✅ shipped |
+| — | `evals/` — Phase 3 eval | ⏳ next |
 
 ## What is an agent (in one paragraph)
 
@@ -47,7 +47,13 @@ uv run phase-3/04_self_critique.py "Write a 4-line poem about gradient descent" 
 uv run phase-3/04_self_critique.py "Explain TCP handshake" --critic-model claude-sonnet-4-6   # stronger critic
 uv run phase-3/04_self_critique.py "Explain recursion to a 10-year-old" --show-drafts          # see every revision
 
-# 05 (the ship) + eval come in subsequent turns
+# Exercise 5 ✅ — THE SHIP: research agent (web_search + fetch_url + write_file → cited report)
+uv run phase-3/05_research_agent.py "What is the ReAct prompting pattern and who introduced it?"
+uv run phase-3/05_research_agent.py "Compare RAG vs fine-tuning for keeping an LLM current" --model claude-sonnet-4-6
+uv run phase-3/05_research_agent.py "How does prompt caching cut cost on Anthropic?" --trace
+# reports are written to phase-3/reports/ (gitignored — regenerated each run)
+
+# eval comes in a subsequent turn
 ```
 
 ## What Exercise 2 adds on top of Exercise 1
@@ -146,6 +152,46 @@ Round 3: 9/10  — accepted ✓
 ### When NOT to use this
 
 Self-critique roughly **doubles-to-quadruples cost** (every round is generate + critique). It earns that on open-ended generative tasks where quality is subjective and improvable — writing, explanations, summaries. It's **wasted on deterministic tasks** (`2+2`) where there's nothing to critique. Match the pattern to the task.
+
+## What Exercise 5 adds: the ship — a research agent
+
+The Phase 3 deliverable. Same loop as Exercise 2 (copied almost verbatim — that's the point), but the tools finally touch the **real world**: the live web and your filesystem.
+
+```
+question → web_search → fetch_url (×N) → write_file → cited markdown report
+```
+
+| Tool | Implementation | The design lesson it teaches |
+|---|---|---|
+| `web_search(query)` | DuckDuckGo via `ddgs` (no API key) | Return a numbered list with URLs the model can both *read* and *cite*. |
+| `fetch_url(url)` | `httpx` + `BeautifulSoup`, **output capped at 6,000 chars** | **Bounded tool output is the #1 cost lever.** Every returned char becomes an input token on *every* later turn. |
+| `write_file(name, content)` | plain write to `reports/`, `basename()`-sanitized | The model controls the path — sanitize so it can't escape the directory. |
+
+### What's genuinely new vs Exercises 1–4
+
+1. **Real side effects.** 1–4 used pure functions (math, time). Here a tool hits the network (slow, flaky, can fail) and another writes a file. Tool *design* now matters: bounded output, graceful errors, sanitized inputs.
+2. **Multi-step autonomy.** One question becomes search → pick sources → fetch several → synthesize → write. The model sequences this itself; you only supply the tools and the loop.
+3. **The loop is unchanged.** That's the whole Phase 3 payoff: the ship is Exercise 2's five lines plus three real tools.
+
+### Watch the input tokens grow (the key observation)
+
+A real run of "What is the ReAct prompting pattern?" went 4 iterations / 6 tool calls / **$0.0184**, with input tokens climbing each turn:
+
+```
+iter 1: in=1106   question + tool defs
+iter 2: in=2155   + search results
+iter 3: in=6588   + 3 fetched pages  ← the jump
+iter 4: in=7384   + the report it wrote
+```
+
+The conversation only accumulates — the model re-reads the whole history every turn. Those fetched pages are what spike it, which is exactly why `fetch_url` truncates. Remove the cap and three full pages (~40k chars) inflate every subsequent turn.
+
+### New dependencies (flagged per the Anthropic-first rule)
+
+- **`ddgs`** — DuckDuckGo search, **no API key**, so this runs immediately. It's a *non-Anthropic* dependency (like `fastembed` in Phase 2). Production agents swap in Tavily / Brave / Exa for quality — a one-function change to `web_search`, nothing else moves. (Pulls transitive deps: `primp`, `lxml`, `fake-useragent`.)
+- **`beautifulsoup4`** — HTML → text. We parse with the built-in `html.parser`, so our code doesn't depend on `lxml` staying installed.
+
+Anthropic also offers a *server-side* `web_search` tool that would use your existing key — but it runs on Anthropic's side, hiding the very thing Phase 3 teaches: *your* code executes the tool and feeds the result back. So we kept all three tools client-side on purpose.
 
 ## The 8 new concepts (added to Phase 1+2's 16)
 

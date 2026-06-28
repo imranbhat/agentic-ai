@@ -26,7 +26,7 @@ Each phase has its own README with run order, concepts, and gotchas.
 |---|---|---|
 | [Phase 1](phase-1/README.md) | LLM mental model — tokens, streaming, tool use, structured output, evals | ✅ shipped |
 | [Phase 2](phase-2/README.md) | Application primitives — embeddings, RAG, prompt caching, LLM-as-judge | ✅ shipped |
-| [Phase 3](phase-3/README.md) | Build agents from scratch — the loop, tools, research agent | 🚧 in progress (4/6) |
+| [Phase 3](phase-3/README.md) | Build agents from scratch — the loop, tools, research agent | 🚧 in progress (5/6) |
 | Phase 4 | Frameworks and patterns | — |
 | Phase 5 | Production-grade agents | — |
 | Phase 6 | Frontiers (computer use, browser agents, voice, fine-tuning) | — |
@@ -64,11 +64,13 @@ learn-ai/
 │   └── evals/
 │       ├── eval_rag.py   #    LLM-as-judge across retrieval/gen/refusal
 │       └── eval_set.jsonl
-└── phase-3/              # 🚧 in progress (4/6) — agents from scratch
+└── phase-3/              # 🚧 in progress (5/6) — agents from scratch
     ├── README.md         #    run order + 8 new concepts + ReAct/critique notes
     ├── 01_agent_loop_minimal.py  # the bare while-loop
     ├── 02_agent_loop_robust.py   # 3 tools, error recovery, cost, --trace
     ├── 03_agent_loop_react.py    # ReAct: Thought → Action → Observation
-    └── 04_self_critique.py       # generate → critique → revise (Reflexion)
-    #   05_research_agent.py (ship) + evals/ — pending
+    ├── 04_self_critique.py       # generate → critique → revise (Reflexion)
+    ├── 05_research_agent.py      # ship: web_search + fetch_url + write_file → cited report
+    └── reports/                  # generated reports (gitignored)
+    #   evals/ — pending
 ```
