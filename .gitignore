@@ -11,6 +11,3 @@ __pycache__/
 
 # Phase 2 — vector indexes are derived from the .md source files
 phase-2/index/
-
-# Phase 3 — research-agent reports are regenerated each run
-phase-3/reports/

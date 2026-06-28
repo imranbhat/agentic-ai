@@ -51,7 +51,7 @@ uv run phase-3/04_self_critique.py "Explain recursion to a 10-year-old" --show-d
 uv run phase-3/05_research_agent.py "What is the ReAct prompting pattern and who introduced it?"
 uv run phase-3/05_research_agent.py "Compare RAG vs fine-tuning for keeping an LLM current" --model claude-sonnet-4-6
 uv run phase-3/05_research_agent.py "How does prompt caching cut cost on Anthropic?" --trace
-# reports are written to phase-3/reports/ (gitignored — regenerated each run)
+# reports are written to phase-3/reports/ (checked in as sample output)
 
 # eval comes in a subsequent turn
 ```

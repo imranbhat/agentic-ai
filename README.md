@@ -71,6 +71,6 @@ learn-ai/
     ├── 03_agent_loop_react.py    # ReAct: Thought → Action → Observation
     ├── 04_self_critique.py       # generate → critique → revise (Reflexion)
     ├── 05_research_agent.py      # ship: web_search + fetch_url + write_file → cited report
-    └── reports/                  # generated reports (gitignored)
+    └── reports/                  # generated reports (checked in as samples)
     #   evals/ — pending
 ```
