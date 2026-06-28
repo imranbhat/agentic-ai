@@ -4,7 +4,7 @@
 
 **Ship deliverable:** a research agent in ~200 lines of pure Python, no framework. Tools: web search, fetch URL, write file. Input: a question. Output: a cited markdown report.
 
-## Progress — 5 of 6 (🚧 in progress)
+## Progress — 6 of 6 (✅ complete)
 
 | # | Deliverable | Status |
 |---|---|---|
@@ -13,7 +13,7 @@
 | 03 | [`03_agent_loop_react.py`](03_agent_loop_react.py) — ReAct (Thought → Action → Observation) | ✅ shipped |
 | 04 | [`04_self_critique.py`](04_self_critique.py) — generate → critique → revise (Reflexion) | ✅ shipped |
 | 05 | [`05_research_agent.py`](05_research_agent.py) — **the ship**: web search + fetch + write file → cited report | ✅ shipped |
-| — | `evals/` — Phase 3 eval | ⏳ next |
+| 06 | [`evals/eval_research.py`](evals/eval_research.py) — eval the agent on trajectory + output | ✅ shipped |
 
 ## What is an agent (in one paragraph)
 
@@ -53,7 +53,9 @@ uv run phase-3/05_research_agent.py "Compare RAG vs fine-tuning for keeping an L
 uv run phase-3/05_research_agent.py "How does prompt caching cut cost on Anthropic?" --trace
 # reports are written to phase-3/reports/ (checked in as sample output)
 
-# eval comes in a subsequent turn
+# Exercise 6 ✅ — eval the agent across a question set (trajectory + output)
+uv run phase-3/evals/eval_research.py
+uv run phase-3/evals/eval_research.py --model claude-sonnet-4-6   # eval a stronger agent
 ```
 
 ## What Exercise 2 adds on top of Exercise 1
@@ -192,6 +194,24 @@ The conversation only accumulates — the model re-reads the whole history every
 - **`beautifulsoup4`** — HTML → text. We parse with the built-in `html.parser`, so our code doesn't depend on `lxml` staying installed.
 
 Anthropic also offers a *server-side* `web_search` tool that would use your existing key — but it runs on Anthropic's side, hiding the very thing Phase 3 teaches: *your* code executes the tool and feeds the result back. So we kept all three tools client-side on purpose.
+
+## What Exercise 6 adds: evaluating an agent (the phase finale)
+
+Exercises 1–5 *built* the agent. This one *measures* it — and answers the question Exercise 3 raised: since agents are non-deterministic, **one good run proves nothing.** An eval scores behavior across a *set*.
+
+The new idea vs the Phase 1 and 2 evals: those scored a single **output**. An agent is judged on its **trajectory** — the sequence of tool calls — because that's where agent-specific failures hide. So `eval_research.py` scores five dimensions, cheap deterministic ones first, the expensive LLM-judge last:
+
+| # | Dimension | Kind | Catches |
+|---|---|---|---|
+| 1 | **completed** | deterministic | agent never called `write_file` — no artifact |
+| 2 | **trajectory_ok** | deterministic | wrong tool order (write before fetch) or runaway loop (> 8 iters) |
+| 3 | **citations_grounded** | deterministic | **hallucinated sources** — a cited URL it never actually fetched |
+| 4 | **contains_expected** | deterministic | report missing a known fact (e.g. no "Yao"/"2022" for ReAct) |
+| 5 | **answers_question** | LLM-as-judge (Sonnet 1–5) | the semantic check — does it actually answer? |
+
+**Why deterministic-first:** dimensions 1–4 are free and catch the dumb, common failures. You only spend judge tokens on reports that already cleared the cheap gates. **Dimension 3 is the star** — "is every citation real?" is invisible to anyone eyeballing the report, and it's only checkable because Exercise 5's `run_agent` was refactored to **return its trajectory** (`fetched_urls`, `tools_called`, …) instead of only printing. *An agent you can't inspect, you can't test.*
+
+**Baseline run:** Haiku agent, Sonnet judge, 3 questions → **3/3 passed, avg answers 4.7/5, $0.0545**. The set passed clean — which is a caveat, not a victory: a load-bearing eval should occasionally fail. Make it bite by adding adversarial cases (an obscure question where search returns junk; an out-of-scope question the agent should refuse). The framework is the deliverable; the score is just today's snapshot.
 
 ## The 8 new concepts (added to Phase 1+2's 16)
 
