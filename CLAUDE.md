@@ -30,6 +30,15 @@ Progress must always be visible and current. **In the same turn that progress ch
 
 Why: the user follows along across many sessions and relies on the READMEs to answer "where are we?" without re-reading code. A stale tree or a vague status is a real failure, not a cosmetic one. If you start an exercise, mark it ⏳/in-progress immediately so the work is never invisible.
 
+### Keep GLOSSARY.md and AGENTS.md current too (added 2026-06-29, by user request)
+
+Two root docs drift silently because they aren't tied to a single phase:
+
+- **`GLOSSARY.md`** — when you introduce a term the user hasn't seen (a new concept, an API field like `tool_result`, a dependency like `ddgs`), add a plain-English row in the same turn. It's the "wait, what does X mean again?" reference; if it lags, it's wrong.
+- **`AGENTS.md`** — when you change setup, run commands, dependencies, or repo conventions (new phase, new deps, gitignore/tracking decisions, commit etiquette), update it. It's the cold-start guide for an agent with no session context.
+
+Same principle as the progress rule: update in the turn the change happens, not in a later cleanup pass.
+
 ## Style
 
 - **Teach, don't just ship.** Every Python file's docstring should explain *why* the exercise exists, not just what it does.
