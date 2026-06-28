@@ -1,0 +1,3 @@
+{"question": "What is the ReAct prompting pattern and who introduced it?", "must_include": ["Yao", "2022"]}
+{"question": "What is retrieval-augmented generation (RAG) and why is it used with LLMs?", "must_include": ["retrieval"]}
+{"question": "What is Anthropic's Model Context Protocol (MCP) and what problem does it solve?", "must_include": ["Anthropic", "context"]}

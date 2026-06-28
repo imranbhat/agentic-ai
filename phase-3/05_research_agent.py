@@ -208,16 +208,30 @@ Rules:
 # ===========================================================================
 # 3. The agent loop — copied from Exercise 2, essentially unchanged
 # ===========================================================================
-def run_agent(question: str, model: str, max_iterations: int, max_tokens: int, trace: bool) -> None:
+def run_agent(question: str, model: str, max_iterations: int, max_tokens: int,
+              trace: bool, quiet: bool = False) -> dict:
+    """Run the research agent and RETURN its trajectory as a dict.
+
+    Why return data instead of just printing: an agent you can't inspect, you
+    can't test. The eval (06) calls this with quiet=True and scores the
+    returned trajectory. The CLI ignores the return value and reads the prints.
+    The loop logic below is identical to before — we only *record* what flows
+    through it. `quiet=True` routes all output to a silenced console.
+    """
     client = Anthropic()
+    out = Console(quiet=quiet)  # Rich's quiet flag swallows every print/rule
     messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
 
     total_in_tokens = 0
     total_out_tokens = 0
     tools_called: list[str] = []
+    fetched_urls: list[str] = []   # every URL fetch_url successfully read
+    report_content: str | None = None  # the markdown handed to write_file
+    report_path: str | None = None
+    last_text = ""                 # most recent text block = final summary on end_turn
 
     for iteration in range(1, max_iterations + 1):
-        console.rule(f"[bold cyan]Iteration {iteration}[/]")
+        out.rule(f"[bold cyan]Iteration {iteration}[/]")
 
         response = client.messages.create(
             model=model,
@@ -229,12 +243,13 @@ def run_agent(question: str, model: str, max_iterations: int, max_tokens: int, t
 
         for block in response.content:
             if block.type == "text":
-                console.print(f"[green]💬 {block.text.strip()}[/]")
+                last_text = block.text.strip()
+                out.print(f"[green]💬 {last_text}[/]")
             elif block.type == "tool_use":
                 # Show a compact preview — write_file's content can be huge.
                 preview = {k: (v[:60] + "…" if isinstance(v, str) and len(v) > 60 else v)
                            for k, v in block.input.items()}
-                console.print(f"[yellow]🔧 {block.name}({json.dumps(preview)})[/]")
+                out.print(f"[yellow]🔧 {block.name}({json.dumps(preview)})[/]")
                 tools_called.append(block.name)
 
         in_t, out_t = response.usage.input_tokens, response.usage.output_tokens
@@ -242,14 +257,17 @@ def run_agent(question: str, model: str, max_iterations: int, max_tokens: int, t
         total_out_tokens += out_t
         in_price, out_price = PRICES.get(model, (0.0, 0.0))
         running = (total_in_tokens * in_price + total_out_tokens * out_price) / 1_000_000
-        console.print(f"[dim]   tokens: in={in_t} out={out_t}  running ${running:.4f}[/]")
+        out.print(f"[dim]   tokens: in={in_t} out={out_t}  running ${running:.4f}[/]")
 
         if response.stop_reason == "end_turn":
-            console.rule("[bold green]✓ Finished[/]")
-            _print_summary(iteration, tools_called, total_in_tokens, total_out_tokens, model)
-            if trace:
-                _print_trace(messages)
-            return
+            out.rule("[bold green]✓ Finished[/]")
+            if not quiet:
+                _print_summary(iteration, tools_called, total_in_tokens, total_out_tokens, model)
+                if trace:
+                    _print_trace(messages)
+            return _result(True, iteration, tools_called, fetched_urls,
+                           report_content, report_path, last_text,
+                           total_in_tokens, total_out_tokens, model)
 
         messages.append({"role": "assistant", "content": response.content})
 
@@ -260,16 +278,22 @@ def run_agent(question: str, model: str, max_iterations: int, max_tokens: int, t
             fn = TOOLS_BY_NAME.get(block.name)
             if fn is None:
                 content = f"ERROR: unknown tool {block.name!r}. Available: {list(TOOLS_BY_NAME)}"
-                console.print(f"[red]⚠  unknown tool: {block.name}[/]")
+                out.print(f"[red]⚠  unknown tool: {block.name}[/]")
             else:
                 try:
                     result = fn(**block.input)
                     content = str(result)
-                    # Show a short confirmation, not the whole payload.
-                    console.print(f"[blue]⚙  → {content[:120].strip()}{'…' if len(content) > 120 else ''}[/]")
+                    out.print(f"[blue]⚙  → {content[:120].strip()}{'…' if len(content) > 120 else ''}[/]")
+                    # Record the trajectory on SUCCESS only — a failed fetch
+                    # isn't a real source, and a failed write isn't a report.
+                    if block.name == "fetch_url":
+                        fetched_urls.append(block.input.get("url", ""))
+                    elif block.name == "write_file":
+                        report_content = block.input.get("content")
+                        report_path = content  # "Wrote N chars to <path>"
                 except Exception as e:
                     content = f"ERROR: {type(e).__name__}: {e}"
-                    console.print(f"[red]⚠  failed: {content[:120]}[/]")
+                    out.print(f"[red]⚠  failed: {content[:120]}[/]")
             tool_results.append({
                 "type": "tool_result",
                 "tool_use_id": block.id,
@@ -277,10 +301,30 @@ def run_agent(question: str, model: str, max_iterations: int, max_tokens: int, t
             })
         messages.append({"role": "user", "content": tool_results})
 
-    console.rule(f"[bold red]✗ Hit max_iterations ({max_iterations})[/]")
-    _print_summary(max_iterations, tools_called, total_in_tokens, total_out_tokens, model)
-    if trace:
-        _print_trace(messages)
+    out.rule(f"[bold red]✗ Hit max_iterations ({max_iterations})[/]")
+    if not quiet:
+        _print_summary(max_iterations, tools_called, total_in_tokens, total_out_tokens, model)
+        if trace:
+            _print_trace(messages)
+    return _result(False, max_iterations, tools_called, fetched_urls,
+                   report_content, report_path, last_text,
+                   total_in_tokens, total_out_tokens, model)
+
+
+def _result(completed, iterations, tools_called, fetched_urls, report_content,
+            report_path, final_summary, in_t, out_t, model) -> dict:
+    """Bundle the trajectory into the dict the eval scores."""
+    in_price, out_price = PRICES.get(model, (0.0, 0.0))
+    return {
+        "completed": completed,          # reached end_turn (vs hit the iteration cap)
+        "iterations": iterations,
+        "tools_called": tools_called,    # ordered list, e.g. [web_search, fetch_url, write_file]
+        "fetched_urls": fetched_urls,    # URLs actually read — the groundedness ground truth
+        "report_content": report_content,  # None if write_file never succeeded
+        "report_path": report_path,
+        "final_summary": final_summary,
+        "cost": (in_t * in_price + out_t * out_price) / 1_000_000,
+    }
 
 
 # ===========================================================================
