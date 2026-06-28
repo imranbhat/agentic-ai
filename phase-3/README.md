@@ -213,6 +213,25 @@ The new idea vs the Phase 1 and 2 evals: those scored a single **output**. An ag
 
 **Baseline run:** Haiku agent, Sonnet judge, 3 questions → **3/3 passed, avg answers 4.7/5, $0.0545**. The set passed clean — which is a caveat, not a victory: a load-bearing eval should occasionally fail. Make it bite by adding adversarial cases (an obscure question where search returns junk; an out-of-scope question the agent should refuse). The framework is the deliverable; the score is just today's snapshot.
 
+### When do you run an eval? (not per user query)
+
+An eval is a **test suite**, not **logging**. You run your unit tests in CI before shipping — not on every production request. Evals are the same: **offline, in development, against the fixed `eval_set.jsonl`** — to answer one question, *"did my change make the agent better or worse?"*
+
+The trigger is almost always **"I'm about to change something that affects behavior":**
+
+| Trigger | Why |
+|---|---|
+| Edited the system prompt | The #1 cause of silent regressions — confirm you didn't break A while fixing B. |
+| Swapped the model (Haiku→Sonnet, or a version bump) | New model = new behavior; is the upgrade actually better *for your task*? |
+| Changed a tool (description, the 6k cap, added one) | Tool changes shift how the model sequences its work. |
+| Before a release / in CI on every PR | So a teammate's "small tweak" can't regress quality unnoticed. |
+| Found a new failure | Add a case capturing it, re-run — now it can't silently return. |
+| On a schedule (nightly) | Catches *drift* — the model API, the web, or your data changing under you. |
+
+**Rule of thumb:** change your code / prompt / model → run the eval. Otherwise don't.
+
+**What *does* run per query** is a different, lighter thing — **guardrails / monitoring**: cheap inline checks on live output ("did it produce anything?", "do the cited URLs resolve?"), plus logging and maybe scoring a **1–5% sample** of real traffic asynchronously. The grounded-citations check here is cheap enough to become a per-query guardrail; the full 5-dimension eval with the Sonnet judge stays in the test suite. **Evals run when *your code* changes; guardrails run when *the user* sends a query.**
+
 ## The 8 new concepts (added to Phase 1+2's 16)
 
 | # | Concept | One-line |
