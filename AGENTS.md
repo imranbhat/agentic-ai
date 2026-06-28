@@ -23,6 +23,11 @@ uv run phase-1/evals/eval_quiz.py        # structural eval, reads topics.jsonl
 
 Eval reads `phase-1/evals/topics.jsonl` — 5 rows, each with `topic`, `difficulty`, `expected_n`.
 
+```bash
+uv run phase-3/05_research_agent.py "your question"     # research agent → cited report
+uv run phase-3/evals/eval_research.py                   # 5-dimension agent eval
+```
+
 ## Phase 2 index
 
 `phase-2/index/` is gitignored — derived data, never committed. Build with:
@@ -33,10 +38,17 @@ uv run phase-2/02_build_index.py --rebuild   # force
 
 Produces `embeddings.npy` (N×384 float32) + `chunks.jsonl` (parallel metadata). ~30s build time.
 
+## Phase 3 research agent
+
+`phase-3/05_research_agent.py` is the ship — an agent with three real tools (`web_search` via `ddgs`, `fetch_url` via httpx+BeautifulSoup, `write_file`). Writes reports to `phase-3/reports/`, which **is tracked** (checked in as sample output, not gitignored). `run_agent` returns a trajectory dict and takes `quiet=True` so the eval can run it silently.
+
+`phase-3/evals/eval_research.py` scores the agent on 5 dimensions (completed, trajectory order/budget, grounded citations, known-fact, LLM-judge). It loads the agent module via `importlib.util.spec_from_file_location` because the filename starts with a digit.
+
 ## Dependency pinning quirks
 
 - `fastembed<0.6.0` — ONNX-based embeddings, no PyTorch
 - `onnxruntime<1.20` — newer versions dropped Intel Mac wheels
+- `ddgs` + `beautifulsoup4` — Phase 3 web tools (keyless search + HTML→text). `ddgs` pulls `primp`/`lxml` transitively; we parse with the built-in `html.parser`.
 
 ## Critical rules (from CLAUDE.md)
 
@@ -47,8 +59,9 @@ Produces `embeddings.npy` (N×384 float32) + `chunks.jsonl` (parallel metadata).
 
 ## Quirks
 
-- `importlib.import_module("02_quiz_cli")` used in eval because filenames starting with digits aren't valid Python identifiers.
+- Filenames start with digits (not valid Python identifiers), so evals import their target by path: `importlib.import_module("02_quiz_cli")` in Phase 1, `importlib.util.spec_from_file_location(...)` for `05_research_agent.py` in Phase 3.
 - Default model `claude-haiku-4-5`. Override with `ANTHROPIC_MODEL` in `.env`.
 - `count_tokens` endpoint is free (no charge).
 - `.claude/settings.local.json` has an allowlist — `uv run *` and `uv sync *` are the main pattern.
-- When `git init` happens: one commit per exercise + one for README updates. Don't bundle both.
+- **Git is initialized**; remote is `https://github.com/imranbhat/agentic-ai` (main). Convention: one commit per exercise + one for README/docs updates — don't bundle both. Attribution trailers are disabled.
+- **Progress rule** (see CLAUDE.md): the same turn progress changes, update the phase `## Progress` block, the root README status table (with the X/Y count), and the root structure tree.

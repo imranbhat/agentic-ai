@@ -60,6 +60,29 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **Vector index** | A bunch of embeddings stored together so you can search them quickly. |
 | **RAG** (Retrieval-Augmented Generation) | Find relevant chunks first, then put them in the prompt so the model can answer using *your* data. |
 
+## Agents (Phase 3)
+
+| Term | Plain English |
+|---|---|
+| **Agent** | An LLM call wrapped in a loop. The model is given tools and decides which to call, over and over, until it's done. |
+| **Agent loop** | The cycle: model → tool call → run the tool → feed result back → model → … → finished. The whole of Phase 3 is this loop. |
+| **Iteration** | One trip around the agent loop — one model call plus the tools it triggered. We cap them so a buggy agent can't loop forever. |
+| **`tool_use`** | Two meanings: a `stop_reason` ("I want to call a tool, keep looping") and a content block holding the tool name + arguments. |
+| **`tool_result`** | The block you send *back* carrying a tool's output, so the model can see what happened. Always tagged with the matching `tool_use_id`. |
+| **`tool_use_id`** | The ID that links a tool result to the exact tool call it answers. Mismatch it and the API errors. |
+| **Parallel tool use** | The model asking for several tools in one turn (e.g. fetch 3 URLs at once) instead of one at a time. |
+| **Stateless** | The model remembers nothing between calls. Your code re-sends the *entire* conversation every turn — which is why input tokens grow each iteration. |
+| **Max-iteration guard** | A hard cap on loop turns. A non-terminating agent is a real failure mode; always bound it. |
+| **ReAct** (Reason + Act) | A prompt pattern: make the model write a "Thought" before each "Action", then see the "Observation". It's a convention, not an API feature. |
+| **Thought / Action / Observation** | ReAct's three beats — the reasoning, the tool call, and the tool's result. Just labels the prompt asks for. |
+| **Self-critique** (Reflexion) | Generate a draft → a critic call grades it → revise → repeat until it passes. The "tool" is another LLM call. |
+| **Generator / Critic** | The two roles in self-critique: one writes, one grades. The seed of multi-agent systems. |
+| **Workflow vs agent** | A *workflow* is a fixed chain of steps you hardcode. An *agent* lets the model decide the steps. Many "agents" should have been workflows. |
+| **Trajectory** | The sequence of actions an agent actually took (search → fetch → write). Agent evals score the trajectory, not just the final output. |
+| **Grounded / groundedness** | Whether the agent's cited sources are ones it *actually read*. An ungrounded citation = an invented source. |
+| **Hallucinated source** | A citation the model made up — a URL it never fetched. The #1 thing the research-agent eval catches. |
+| **Guardrail** | A cheap check that runs on *every live query* (e.g. "do the cited URLs resolve?"). Different from an eval, which runs in development. |
+
 ## Models and providers
 
 | Term | Plain English |
@@ -81,6 +104,9 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **ONNX runtime** | A library that runs ML models without needing PyTorch. Smaller, more portable. |
 | **PyTorch** | A heavy ML library. Powerful but big. Recently dropped Intel Mac support — that's why we switched to ONNX. |
 | **Hugging Face** | A platform for downloading ML models. The BGE embedding model lives there. |
+| **httpx** | A Python HTTP client. The research agent uses it to download web pages in `fetch_url`. |
+| **BeautifulSoup** | A library that parses HTML so you can strip the junk (scripts, nav) and keep the readable text. |
+| **ddgs / DuckDuckGo** | The keyless web-search library the research agent uses. A non-Anthropic dependency; production would swap in Tavily/Brave/Exa. |
 | **CLAUDE.md** | A project file that documents rules for AI agents working in the repo. Auto-loaded into Claude Code sessions. |
 | **Hook** | A shell command Claude Code runs automatically on certain events (e.g. after a file edit). |
 | **Skill** (in Claude Code) | A reusable instruction module Claude can invoke — like `/init` or `/review`. |
@@ -98,6 +124,7 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **RAG** | Retrieval-Augmented Generation | Find relevant context, then generate. |
 | **ONNX** | Open Neural Network Exchange | A model format usable without PyTorch. |
 | **MCP** | Model Context Protocol | An emerging standard for connecting agents to tools (Phase 5). |
+| **ReAct** | Reason + Act | Prompt pattern: think, then act, then observe — looped. |
 | **TDD** | Test-Driven Development | Write tests first, then code. |
 | **CI/CD** | Continuous Integration / Continuous Deployment | Automated build & deploy pipelines. |
 
@@ -108,5 +135,8 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 - **API vs SDK** — The API is the destination. The SDK is the helper library to reach it.
 - **Tool use vs structured output** — Same mechanism. Tool use *is* the API. Structured output is one thing you can do *with* it.
 - **Eval vs unit test** — A unit test checks deterministic code. An eval scores LLM output, which is non-deterministic by nature.
+- **Eval vs guardrail** — An eval runs in development when *your code* changes (slow, thorough, on a test set). A guardrail runs in production on *every user query* (cheap, inline).
+- **Workflow vs agent** — A workflow is steps *you* hardcode. An agent lets *the model* choose the steps. Pick a workflow unless you genuinely need the model to decide.
+- **Trajectory vs output** — The output is the final report. The trajectory is *how it got there* (which tools, in what order). Agent evals care about both.
 - **Embedding vs prompt** — A prompt asks the model to generate. An embedding asks the model to summarize meaning into numbers. Different endpoints, different costs.
 - **Local model vs API model** — Local runs on your CPU (free, slow, basic). API runs in the cloud (paid, fast, smart). For embeddings local is fine; for generation you want API.
