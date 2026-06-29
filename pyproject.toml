@@ -17,6 +17,7 @@ dependencies = [
     "numpy>=1.26.0",
     "ddgs>=9.14.4",
     "beautifulsoup4>=4.15.0",
+    "claude-agent-sdk>=0.2.110",
 ]
 
 [dependency-groups]
