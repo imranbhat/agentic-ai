@@ -28,6 +28,11 @@ uv run phase-3/05_research_agent.py "your question"     # research agent → cit
 uv run phase-3/evals/eval_research.py                   # 5-dimension agent eval
 ```
 
+```bash
+uv run phase-4/01_sdk_hello.py                          # Claude Agent SDK hello-world (async, no while loop)
+uv run phase-4/01_sdk_hello.py "your question"
+```
+
 ## Phase 2 index
 
 `phase-2/index/` is gitignored — derived data, never committed. Build with:
@@ -49,6 +54,7 @@ Produces `embeddings.npy` (N×384 float32) + `chunks.jsonl` (parallel metadata).
 - `fastembed<0.6.0` — ONNX-based embeddings, no PyTorch
 - `onnxruntime<1.20` — newer versions dropped Intel Mac wheels
 - `ddgs` + `beautifulsoup4` — Phase 3 web tools (keyless search + HTML→text). `ddgs` pulls `primp`/`lxml` transitively; we parse with the built-in `html.parser`.
+- `claude-agent-sdk` — Phase 4 agent framework. **Heavy:** one `uv add` pulled 17 packages (~66 MiB) because it bundles a Node-based Claude Code CLI and ships `mcp`/`starlette`/`uvicorn`/`cryptography`. **Requires Node.js present** (the Python SDK shells out to the bundled CLI; we run on Node v23). It also reads `CLAUDE.md` + the working dir by default, so SDK agents are project-aware — expect higher input cost than a bare `messages.create()` call.
 
 ## Critical rules (from CLAUDE.md)
 

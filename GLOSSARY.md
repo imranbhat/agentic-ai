@@ -83,6 +83,20 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **Hallucinated source** | A citation the model made up — a URL it never fetched. The #1 thing the research-agent eval catches. |
 | **Guardrail** | A cheap check that runs on *every live query* (e.g. "do the cited URLs resolve?"). Different from an eval, which runs in development. |
 
+## Frameworks (Phase 4)
+
+| Term | Plain English |
+|---|---|
+| **Agent framework** | A library that runs the agent loop *for* you, so you don't hand-write the `while` loop you built in Phase 3. Trades control for convenience. |
+| **Claude Agent SDK** | Anthropic's agent framework (the `claude-agent-sdk` Python package). It wraps the Claude Code harness — bundles a Node CLI, is MCP-first, and ships built-in tools, hooks, and permission controls. The Phase 4 default. |
+| **`query()`** | The SDK's entry point. An *async generator*: you `async for message in query(...)` and it yields the conversation's messages as the agent runs the loop internally. |
+| **`ClaudeAgentOptions`** | The SDK's single config object — `model`, `system_prompt`, `allowed_tools`, `mcp_servers`, `permission_mode`, `cwd`, `hooks`. The agent-shaped successor to `messages.create()`'s kwargs. |
+| **Async generator** | A function you iterate with `async for`, producing values lazily over time. The SDK uses one so it can stream messages as the agent works. Forces `async`/`await` + `asyncio.run`. |
+| **`AssistantMessage` / `ResultMessage`** | Typed message objects the SDK yields instead of raw `response.content`. `AssistantMessage.content` holds `TextBlock`/`ToolUseBlock`; `ResultMessage` carries `total_cost_usd`, `usage`, `num_turns`, `duration_ms`. |
+| **In-process MCP server** | How the SDK turns *your* Python functions into agent tools — define with `@tool`, group with `create_sdk_mcp_server`, reference as `mcp__<server>__<tool>`. No separate process; runs inside your script. |
+| **Project-aware (by default)** | The Agent SDK auto-loads the working directory and `CLAUDE.md`, so the agent "knows" the repo it runs in — unlike the raw API, where the model sees only your `messages`. Convenient, but adds input cost. |
+| **Building Effective Agents (BEA)** | Anthropic's canonical primer that splits LLM apps into *workflows* (deterministic chains) and *agents* (LLM-driven loops), and names five patterns: prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer. |
+
 ## Models and providers
 
 | Term | Plain English |
@@ -110,6 +124,8 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **CLAUDE.md** | A project file that documents rules for AI agents working in the repo. Auto-loaded into Claude Code sessions. |
 | **Hook** | A shell command Claude Code runs automatically on certain events (e.g. after a file edit). |
 | **Skill** (in Claude Code) | A reusable instruction module Claude can invoke — like `/init` or `/review`. |
+| **claude-agent-sdk** | The Python package for the Claude Agent SDK (Phase 4). Heavy install (~66 MiB, 17 deps) because it bundles a Node-based Claude Code CLI. |
+| **Node.js** | The JavaScript runtime the bundled Claude Code CLI runs on. The Agent SDK shells out to it under the hood, which is why a Python "agent framework" needs Node present. |
 
 ## Acronyms cheat sheet
 
@@ -123,7 +139,7 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **CLI** | Command-Line Interface | A program you run from the terminal (no GUI). |
 | **RAG** | Retrieval-Augmented Generation | Find relevant context, then generate. |
 | **ONNX** | Open Neural Network Exchange | A model format usable without PyTorch. |
-| **MCP** | Model Context Protocol | An emerging standard for connecting agents to tools (Phase 5). |
+| **MCP** | Model Context Protocol | The standard for connecting agents to tools. The Claude Agent SDK is MCP-first — your Phase 4 tools register as an in-process MCP server; consuming external servers is a Phase 5 topic. |
 | **ReAct** | Reason + Act | Prompt pattern: think, then act, then observe — looped. |
 | **TDD** | Test-Driven Development | Write tests first, then code. |
 | **CI/CD** | Continuous Integration / Continuous Deployment | Automated build & deploy pipelines. |

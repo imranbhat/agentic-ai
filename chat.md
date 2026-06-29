@@ -987,3 +987,32 @@ A few patterns from this conversation that mattered:
 10. **Eval the process, not just the output.** Phase 1/2 evals scored a single artifact. An agent eval scores the *trajectory* — did it use tools in a sane order, stay in budget, cite only what it fetched. The most valuable check (grounded citations) is one you can't get by reading the final report; you need the sequence of actions.
 
 That's the project so far.
+
+---
+
+# Phase 4 — Frameworks and patterns (in progress)
+
+**Goal:** know which framework to reach for and why — and *feel* what a framework adds and hides versus the loop we hand-wrote in Phase 3.
+
+**Confirmed 9-exercise plan:**
+1. `01_sdk_hello.py` — Claude Agent SDK hello-world ✅
+2. `02_research_agent_sdk.py` — port the Phase 3 research agent to the SDK (the ship)
+3. `03_sdk_vs_scratch.md` — the comparison: LOC, robustness, behavior
+4–8. The five *Building Effective Agents* patterns (prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) — built in **plain Anthropic API** on purpose, because they're workflows and a framework would hide the orchestration they teach.
+9. `09_langgraph_research_agent.py` — the same agent a third way, on LangGraph, for a true 3-way comparison.
+
+Two decisions confirmed up front: patterns in raw API (not the SDK), and LangGraph included in Phase 4 (not deferred).
+
+## Exercise 01 — the SDK hello-world
+
+The whole file is one `query()` call with **no `while` loop** — that absence is the lesson. What changed from Phases 1–3:
+
+- **Async-first.** `async for message in query(...)` + `asyncio.run`, not the synchronous `response = client.messages.create(...)`.
+- **Typed messages.** You consume `AssistantMessage` (with `TextBlock`s) then a `ResultMessage`, not raw `response.content`.
+- **Cost computed for you.** `ResultMessage.total_cost_usd` / `usage` / `num_turns` arrive filled in — no hand-rolled `PRICES` table.
+
+**The turn-one surprise:** asked to "say hello," the agent replied *"Ready to continue your learn-ai project…"* — even though the system prompt only said "concise teaching assistant." The Agent SDK is **project-aware by default** (it's Claude Code under the hood, so it loads the cwd and `CLAUDE.md`). The raw API sees only your `messages`; the SDK quietly sees the whole repo. That convenience is also a cost: the Haiku hello-world ran **$0.003–0.013** (variable, cache read vs. write) vs. a fraction of a cent in Phase 1.
+
+**War stories (new):**
+9. The SDK is a heavy install — one `uv add` pulled **17 packages (~66 MiB)** because it bundles a Node-based Claude Code CLI. (Phase 3's agent was ~200 lines on `anthropic` + `httpx`.)
+10. A throwaway probe that iterated `query()` but only inspected the `ResultMessage` intermittently raised `Claude Code returned an error result: success` and reported $0 cost. Consuming the *full* message stream (as the shipped script does) is stable. Lesson: don't drain only the final frame.
