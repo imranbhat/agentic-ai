@@ -4,18 +4,18 @@
 
 **Ship deliverable (from the roadmap):** rebuild the **exact** Phase 3 research agent on the **Claude Agent SDK**, then compare lines of code, robustness, and behavior against the hand-rolled version.
 
-> **Status: 🚧 in progress (2/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
+> **Status: 🚧 in progress (3/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
 > patterns) are built in **plain Anthropic API** on purpose — they're workflows, and a framework would hide
 > the orchestration they're meant to teach. Exercise 09 adds **LangGraph** for a true 3-way comparison.
 
-## Progress — 2 of 9
+## Progress — 3 of 9
 
 | # | Deliverable | Status |
 |---|---|---|
 | 01 | [`01_sdk_hello.py`](01_sdk_hello.py) — SDK hello-world: the simplest `query()`, the typed message stream, cost computed for you | ✅ shipped |
 | 02 | [`02_research_agent_sdk.py`](02_research_agent_sdk.py) — **the ship**: Phase 3's research agent, ported to the SDK (same 3 tools, no hand-written loop) | ✅ shipped |
-| 03 | `03_sdk_vs_scratch.md` — the comparison: LOC, robustness, behavior; what the framework adds and what it hides | ⏳ next |
-| 04 | `04_prompt_chaining.py` — sequential LLM calls with a gate between them | ⏳ pending |
+| 03 | [`03_sdk_vs_scratch.md`](03_sdk_vs_scratch.md) — the comparison: LOC, robustness, behavior; what the framework adds and what it hides | ✅ shipped |
+| 04 | `04_prompt_chaining.py` — sequential LLM calls with a gate between them | ⏳ next |
 | 05 | `05_routing.py` — a classifier sends input to a specialized handler | ⏳ pending |
 | 06 | `06_parallelization.py` — fan-out, then vote/aggregate | ⏳ pending |
 | 07 | `07_orchestrator_workers.py` — central LLM dispatches subtasks to workers | ⏳ pending |
@@ -101,6 +101,21 @@ Nearly the same cost. The framework didn't make the agent cheaper or smarter —
 | `system_prompt=<string>` | A plain string **replaces** the Claude Code preset with our research prompt. |
 | `max_turns=15` | The SDK's built-in version of Phase 3's loop guard — a field, not a `for` range. |
 | `permission_mode="bypassPermissions"` | Run non-interactively (our `write_file` tool touches disk; no approval prompts). |
+
+## What Exercise 03 adds: the comparison (read [`03_sdk_vs_scratch.md`](03_sdk_vs_scratch.md))
+
+No new code — the roadmap's actual ask, written up: the two agents weighed on **lines of code, robustness, and
+behavior**, with measured numbers from real runs. The one-line verdict:
+
+> The framework saved **code**, not **cost** or **quality**. ~250 → ~133 code lines (the ~150 lines of *loop
+> plumbing* collapsed to ~40; the tools — *your* problem — stayed the same size). Same trajectory, ~$0.0184 vs
+> ~$0.0194 on the same question. You pay for it in 66 MiB + Node, async-first code, and default behavior you
+> now have to *know about* rather than control.
+
+**When to reach for which:** hand-roll while the loop is the thing you're learning or must tightly control;
+reach for the SDK once the loop is settled and you'd rather not maintain retries, budgets, permissions, and MCP
+wiring yourself. You can only judge that trade *because* you wrote the loop by hand first — which is why Phase 3
+came before Phase 4. The full tables (what the framework adds, what it hides) are in the writeup.
 
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 

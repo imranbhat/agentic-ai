@@ -1040,3 +1040,15 @@ Near-identical cost and the same trajectory. The framework didn't make the agent
 **War stories (new):**
 11. Blocking `ddgs`/`httpx` inside an `async def` tool blocks the event loop. Fine for a single-user script; a production port would use `httpx.AsyncClient` + a thread for ddgs. Surfaced the shortcut in a comment, didn't hide it.
 12. `python3` is the system interpreter and can't see the uv venv (`ModuleNotFoundError: claude_agent_sdk`) — inspect SDK objects with `uv run python -c ...`.
+
+## Exercise 03 — the comparison (hand-rolled vs SDK)
+
+No new code — the roadmap's actual ask, written up in `phase-4/03_sdk_vs_scratch.md`: the two research agents weighed on **lines of code, robustness, and behavior**, with measured numbers.
+
+**Lines of code** (AST line classifier): Phase 3 hand-rolled = 384 total / ~250 code; SDK port = 241 total / ~133 code. ~47% fewer code lines — but the honest framing is sharper: the ~150 lines of *loop plumbing* (the for loop, tool dispatch, tool_result assembly, PRICES table + token math, trace/summary helpers) collapsed to ~40, while the three tools — the part a framework *can't* write for you — stayed the same size in both.
+
+**Dependencies:** Phase 3 = `anthropic` + `httpx` + `bs4` + `ddgs`. Phase 4 = all that + `claude-agent-sdk` (17 packages, ~66 MiB, plus a Node runtime) to run three Python functions in a loop.
+
+**Behavior** (same ReAct question): same trajectory (search → fetch ×3 → write → summary), $0.0184 vs $0.0194. The framework changed the *developer's* experience, not the *agent's*.
+
+**The verdict:** the framework saved code, not cost or quality. Hand-roll while the loop is the thing you're learning or must tightly control; reach for the SDK once the loop is settled and you'd rather not maintain retries/budgets/permissions/MCP yourself. You can only judge that trade *because* you wrote the loop by hand first — which is why Phase 3 came before Phase 4. Block A (Claude Agent SDK) complete; next is Block B, the five Building Effective Agents patterns in plain Anthropic API.
