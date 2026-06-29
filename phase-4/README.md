@@ -102,6 +102,60 @@ Nearly the same cost. The framework didn't make the agent cheaper or smarter —
 | `max_turns=15` | The SDK's built-in version of Phase 3's loop guard — a field, not a `for` range. |
 | `permission_mode="bypassPermissions"` | Run non-interactively (our `write_file` tool touches disk; no approval prompts). |
 
+### Deep dive: what is MCP, and how did we actually use it? (asked mid-phase)
+
+Exercise 02 wrapped three plain Python functions in `create_sdk_mcp_server` — which raises a fair question: why
+did three *local* functions suddenly need a "server"?
+
+**MCP (Model Context Protocol) is an open standard for how an LLM app talks to a tool provider.** The analogy:
+**MCP is USB-C for AI tools.** It defines one uniform plug — a standard format for "here are my tools (name +
+description + input schema)," "call this tool with these args," and "here's the result." It solves the **M×N
+explosion**: M apps × N tools would be M×N bespoke integrations; with MCP each tool is written once as a
+*server* and each app speaks MCP once as a *client*, so it becomes M+N. Two roles: the **client/host** (the LLM
+app — discovers tools, forwards them to the model, routes the calls) and the **server** (owns and executes the
+tools).
+
+**Phase 3 used no MCP.** The tools were hardwired into your loop, in two hand-written pieces:
+
+```python
+TOOL_DEFINITIONS = [{"name": "web_search", "input_schema": {...}}, ...]   # raw schema dicts
+response = client.messages.create(..., tools=TOOL_DEFINITIONS)           # passed inline
+fn = TOOLS_BY_NAME.get(block.name); result = fn(**block.input)           # YOUR loop dispatches
+```
+
+No protocol — just your dict → the API's `tools` param → a `tool_use` block → *your code* calls the function.
+
+**Exercise 02 used MCP because the SDK is MCP-first** — it has no "raw tool dicts + dispatch table" path. The
+only way to give it *your* functions is to package them as a server:
+
+```python
+@tool("web_search", "Search the web...", {"query": str})                 # generates the schema
+server = create_sdk_mcp_server(name="research", tools=[web_search, ...])
+options = ClaudeAgentOptions(mcp_servers={"research": server},
+                             allowed_tools=["mcp__research__web_search", ...])  # namespaced
+```
+
+Now the **SDK** plays client: it asks your server "what tools do you have?", passes them to the model, and
+routes `mcp__research__web_search` calls back to your function. The dispatch you wrote by hand in Phase 3 is
+exactly what the SDK does for you, over MCP.
+
+| | Phase 3 (no MCP) | Exercise 02 (MCP) |
+|---|---|---|
+| Tool schema | hand-written dict | `@tool` generates it |
+| Who runs the function | **your loop**: `fn(**input)` | **the SDK**, via the MCP layer |
+| Tool name | bare `web_search` | namespaced `mcp__research__web_search` |
+| The interface | none — direct Python | MCP |
+
+**The nuance that makes it feel like ceremony:** `create_sdk_mcp_server` builds an **in-process** server — it
+runs *inside your script*, no subprocess, no network. You get the MCP *shape* without the MCP *cost*.
+
+**Did we need MCP here? Honestly, no.** For three local functions, Phase 3's inline approach is simpler. We used
+MCP only because the SDK imposes it as its universal tool door (built-in tools, your tools, and external servers
+all enter the same way — uniformity is the benefit, a little ceremony is the price). **Where MCP actually pays
+off** is the case we haven't hit: consuming *someone else's* tools — point the SDK at a GitHub or Slack MCP
+server and get those tools with zero integration code. That's a **Phase 5** topic. In Phase 4 we only used the
+"wrap my own functions" corner of MCP — the shape, not yet the payoff.
+
 ## What Exercise 03 adds: the comparison (read [`03_sdk_vs_scratch.md`](03_sdk_vs_scratch.md))
 
 No new code — the roadmap's actual ask, written up: the two agents weighed on **lines of code, robustness, and
