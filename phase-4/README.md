@@ -4,17 +4,17 @@
 
 **Ship deliverable (from the roadmap):** rebuild the **exact** Phase 3 research agent on the **Claude Agent SDK**, then compare lines of code, robustness, and behavior against the hand-rolled version.
 
-> **Status: 🚧 in progress (1/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
+> **Status: 🚧 in progress (2/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
 > patterns) are built in **plain Anthropic API** on purpose — they're workflows, and a framework would hide
 > the orchestration they're meant to teach. Exercise 09 adds **LangGraph** for a true 3-way comparison.
 
-## Progress — 1 of 9
+## Progress — 2 of 9
 
 | # | Deliverable | Status |
 |---|---|---|
 | 01 | [`01_sdk_hello.py`](01_sdk_hello.py) — SDK hello-world: the simplest `query()`, the typed message stream, cost computed for you | ✅ shipped |
-| 02 | `02_research_agent_sdk.py` — **the ship**: port Phase 3's research agent (web_search + fetch_url + write_file) to the SDK | ⏳ next |
-| 03 | `03_sdk_vs_scratch.md` — the comparison: LOC, robustness, behavior; what the framework adds and what it hides | ⏳ pending |
+| 02 | [`02_research_agent_sdk.py`](02_research_agent_sdk.py) — **the ship**: Phase 3's research agent, ported to the SDK (same 3 tools, no hand-written loop) | ✅ shipped |
+| 03 | `03_sdk_vs_scratch.md` — the comparison: LOC, robustness, behavior; what the framework adds and what it hides | ⏳ next |
 | 04 | `04_prompt_chaining.py` — sequential LLM calls with a gate between them | ⏳ pending |
 | 05 | `05_routing.py` — a classifier sends input to a specialized handler | ⏳ pending |
 | 06 | `06_parallelization.py` — fan-out, then vote/aggregate | ⏳ pending |
@@ -41,6 +41,11 @@ export PATH="$HOME/.local/bin:$PATH"
 # Exercise 01 ✅ — Claude Agent SDK hello-world (no while loop, async, cost computed for you)
 uv run phase-4/01_sdk_hello.py
 uv run phase-4/01_sdk_hello.py "Explain what an agent loop is in two sentences."
+
+# Exercise 02 ✅ — THE SHIP: Phase 3's research agent, rebuilt on the SDK (same 3 tools, loop deleted)
+uv run phase-4/02_research_agent_sdk.py "What is the ReAct prompting pattern and who introduced it?"
+uv run phase-4/02_research_agent_sdk.py "Compare RAG vs fine-tuning for keeping an LLM current" --model claude-sonnet-4-6
+# reports are written to phase-4/reports/ (checked in as sample output)
 ```
 
 ## What Exercise 01 adds: the SDK hello-world
@@ -60,6 +65,43 @@ The entire file is **one `query()` call** — and there is no `while` loop in it
 
 Ask the hello-world to say hello and it replies *"Ready to continue your **learn-ai** project…"* — even though our system prompt only said "You are a concise teaching assistant." **The Agent SDK is project-aware by default**: it *is* Claude Code under the hood, so it picks up the working directory and reads your `CLAUDE.md`. That's the framework doing things you never asked it to — the exact opposite of the raw API, where the model sees *only* what you put in `messages`. It's convenient (an agent that knows its repo) and it's a tax (more input context = higher, variable cost). This is "what the framework adds and hides," made concrete before you've written a single tool.
 
+## What Exercise 02 adds: the ship — port the research agent
+
+A *faithful port* of [`phase-3/05_research_agent.py`](../phase-3/05_research_agent.py): **same three tools** (web_search via `ddgs`, fetch_url with the 6,000-char cap, write_file), **same system prompt**, **same kind of output** (a cited markdown report in [`phase-4/reports/`](reports/)). Exactly one thing is deleted — the hand-written agent loop. Put the two files side by side; the diff *is* Phase 4:
+
+| Phase 3 — you own the loop | Phase 4 — the SDK owns it |
+|---|---|
+| `for iteration in range(max_iterations):` | `max_turns=15` — a config field |
+| `response = client.messages.create(...)` | `async for message in query(...)` |
+| append assistant content, then loop | the SDK appends and re-calls for you |
+| run each tool, build `tool_result`, append | the SDK calls your `@tool` and feeds the result back |
+| `if stop_reason == "end_turn": break` | the SDK decides when it's done |
+| `PRICES` table + manual token math | `ResultMessage.total_cost_usd` |
+| unknown-tool guard, error round-trip by hand | the SDK dispatches and relays tool errors |
+
+**What you still write — and a framework can't:** the three tools. Tool *design* (bounded output, sanitized paths, useful return strings) is yours in every framework. That's the durable Phase 3 skill; the loop was the disposable part.
+
+### Same behavior, measured (the early read on Exercise 03)
+
+Run it on the exact Phase 3 question — *"What is the ReAct prompting pattern and who introduced it?"* — and you get the same trajectory and a near-identical bill:
+
+```
+search → fetch ×3 (in parallel) → write_file → 2-sentence summary
+6 turns • ~21 s • $0.0194        (Phase 3 hand-rolled: 4 iters / 6 tool calls / $0.0184)
+```
+
+Nearly the same cost. The framework didn't make the agent cheaper or smarter — it made *you* write less code. That's the honest takeaway, and Exercise 03 will lay the two side by side in full.
+
+### The faithful-port options (each a deliberate choice)
+
+| Option | Why |
+|---|---|
+| `tools=[]` | Drop **all** built-in tools (Bash/Read/Edit/…). The agent has only our three, exactly like Phase 3. |
+| `setting_sources=[]` | **Isolation** — do *not* load `CLAUDE.md`. This is the deliberate opposite of Exercise 01: here we want a clean agent that sees only the question, not the repo. |
+| `system_prompt=<string>` | A plain string **replaces** the Claude Code preset with our research prompt. |
+| `max_turns=15` | The SDK's built-in version of Phase 3's loop guard — a field, not a `for` range. |
+| `permission_mode="bypassPermissions"` | Run non-interactively (our `write_file` tool touches disk; no approval prompts). |
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
@@ -69,8 +111,12 @@ Ask the hello-world to say hello and it replies *"Ready to continue your **learn
 | 27 | **`query()`** | The SDK's entry point — an **async generator** that yields the conversation's messages as the agent runs. |
 | 28 | **`ClaudeAgentOptions`** | The one config object: `model`, `system_prompt`, `allowed_tools`, `mcp_servers`, `permission_mode`, `cwd`, `hooks`. |
 | 29 | **Typed messages** (`AssistantMessage` / `ResultMessage`) | You consume structured message objects, not raw `response.content`. `ResultMessage` carries cost/usage/turns. |
-| 30 | **In-process MCP server** | How the SDK takes *your* Python functions as tools — `@tool` + `create_sdk_mcp_server`, referenced as `mcp__<server>__<tool>`. (Used in Ex 02.) |
+| 30 | **In-process MCP server** | How the SDK takes *your* Python functions as tools — `@tool` + `create_sdk_mcp_server`, referenced as `mcp__<server>__<tool>`. |
 | 31 | **Async-first** | The SDK forces `async`/`await` + `asyncio.run`, unlike the synchronous code of Phases 1–3. |
+| 32 | **`@tool` return shape** | A custom tool receives `args` (a dict) and must return `{"content": [{"type": "text", "text": ...}]}`. That text is all the model sees — same as a Phase 3 tool's return string. |
+| 33 | **`max_turns` (built-in loop guard)** | The SDK config field that replaces Phase 3's hand-written max-iteration cap. Also `max_budget_usd` for a built-in cost ceiling. |
+| 34 | **Isolation (`setting_sources=[]`)** | Tell the SDK to load *no* project settings — so the agent does **not** read `CLAUDE.md`. The deliberate opposite of Exercise 01's default project-awareness. |
+| 35 | **`permission_mode`** | Governs whether tool calls need approval. `"bypassPermissions"` runs non-interactively; the default would prompt for non-allowlisted tools. |
 
 ## Gotchas
 
@@ -78,3 +124,6 @@ Ask the hello-world to say hello and it replies *"Ready to continue your **learn
 - **A Haiku hello-world cost $0.003–0.013, and it varied run to run.** Phase 1's hello-world was a fraction of a cent. The gap is the injected harness/project context (and prompt-cache read vs. write across runs — repeated runs are cheaper). The framework's convenience has a baseline token tax.
 - **`claude-agent-sdk` is a heavy install.** One `uv add` pulled in **17 packages (~66 MiB)** — it bundles a Node-based Claude Code CLI plus `mcp`, `starlette`, `uvicorn`, `cryptography`. Contrast Phase 3's agent: ~200 lines on `anthropic` + `httpx`. Weight-for-convenience is the trade Exercise 03 measures.
 - **Don't drain only the `ResultMessage`.** A throwaway probe that iterated `query()` but only inspected `ResultMessage` intermittently raised `Claude Code returned an error result: success` and reported zero cost. Iterating and handling *each* message type (as the shipped script does) is stable. Lesson: consume the SDK's full message stream, not just the final frame.
+- **Blocking tools inside `async` (Ex 02).** Our ported `web_search`/`fetch_url` call synchronous `ddgs`/`httpx` inside an `async def`, which blocks the event loop for the call's duration. Fine for a single-user teaching script (nothing else is running), but a production port would use `httpx.AsyncClient` and run `ddgs` in a thread. We surfaced the shortcut in a comment rather than hiding it.
+- **`num_turns` ≠ Phase 3 "iterations" (Ex 02).** The SDK's `num_turns` (≈6 for the ReAct question) counts message exchanges, not model calls; Phase 3's loop counted ~4 model calls for the same work. Don't compare the two counters directly — compare cost and trajectory instead.
+- **Use `uv run python`, not `python3`, to inspect the SDK.** `python3` is the system interpreter and can't see the uv-managed venv (`ModuleNotFoundError: claude_agent_sdk`). Anything that imports project deps must go through `uv run`.

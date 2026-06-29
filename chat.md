@@ -1016,3 +1016,27 @@ The whole file is one `query()` call with **no `while` loop** — that absence i
 **War stories (new):**
 9. The SDK is a heavy install — one `uv add` pulled **17 packages (~66 MiB)** because it bundles a Node-based Claude Code CLI. (Phase 3's agent was ~200 lines on `anthropic` + `httpx`.)
 10. A throwaway probe that iterated `query()` but only inspected the `ResultMessage` intermittently raised `Claude Code returned an error result: success` and reported $0 cost. Consuming the *full* message stream (as the shipped script does) is stable. Lesson: don't drain only the final frame.
+
+## Exercise 02 — the ship: port the research agent to the SDK
+
+A *faithful port* of `phase-3/05_research_agent.py`: same three tools (web_search via ddgs, fetch_url with the 6,000-char cap, write_file), same system prompt, same cited-markdown output. The only thing deleted is the hand-written `while` loop — the SDK runs it.
+
+The tools are now registered as one in-process MCP server (`@tool` + `create_sdk_mcp_server`), addressed as `mcp__research__<tool>`. Faithful-port options, each a deliberate choice:
+- `tools=[]` — no built-in Bash/Read/Edit; only our three exist, like Phase 3.
+- `setting_sources=[]` — isolation; do NOT load `CLAUDE.md`. The deliberate opposite of Ex 01's project-awareness — here we want a clean agent that sees only the question.
+- `system_prompt=<string>` — replaces the Claude Code preset with our research prompt.
+- `max_turns=15` — the SDK's built-in version of Phase 3's hand-written loop guard.
+- `permission_mode="bypassPermissions"` — non-interactive (write_file touches disk).
+
+**Same behavior, measured.** On the exact Phase 3 question ("What is the ReAct prompting pattern and who introduced it?"):
+```
+search → fetch ×3 (in parallel) → write_file → 2-sentence summary
+6 turns • ~21 s • $0.0194        (Phase 3 hand-rolled: 4 iters / 6 tool calls / $0.0184)
+```
+Near-identical cost and the same trajectory. The framework didn't make the agent cheaper or smarter — it made *us* write less code. The report (`phase-4/reports/react_prompting_pattern.md`) is correctly cited: Yao et al. 2022, Google Brain, right paper and authors.
+
+**The keeper lesson:** what a framework can't do for you is the tools. Tool *design* — bounded output, sanitized paths, useful return strings — is yours in every framework. The loop was the disposable part; tool design is the durable Phase 3 skill.
+
+**War stories (new):**
+11. Blocking `ddgs`/`httpx` inside an `async def` tool blocks the event loop. Fine for a single-user script; a production port would use `httpx.AsyncClient` + a thread for ddgs. Surfaced the shortcut in a comment, didn't hide it.
+12. `python3` is the system interpreter and can't see the uv venv (`ModuleNotFoundError: claude_agent_sdk`) — inspect SDK objects with `uv run python -c ...`.
