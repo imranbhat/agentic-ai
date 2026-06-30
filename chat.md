@@ -1084,3 +1084,24 @@ Picked up Phase 4 already 3/9 shipped (SDK hello → research-agent port → com
 **Deliberate non-overlap:** the gate only *stops*. Looping its feedback back into step ① to *improve* the draft is generate→critique→retry — evaluator-optimizer, Exercise 08. Two different patterns kept separate.
 
 Docs updated same turn (phase-4 progress 3/9→4/9, run order, "What Ex 04 adds" section, concepts 36–38; root README status + tree; GLOSSARY prompt-chaining/gate; AGENTS run cmds). Next: Exercise 05 — routing.
+
+## Exercise 05 — routing (BEA pattern #2, a branch not a sequence)
+
+**What it is:** a cheap **classifier** call inspects the input and **branches** to exactly one specialized handler. Contrast with Ex 04: chaining is "and then, and then" (every step runs); routing is "which one?" (one handler runs).
+
+**The chain:** `input → classifier (Haiku, forced tool use → {category, reason}) → branch: simple→Haiku | reasoning→Sonnet | refuse→canned string (no LLM)`.
+
+**Measured across three inputs:**
+| Route | Classifier | Handler | Total | Model |
+|---|---|---|---|---|
+| simple ("capital of France") | $0.0009 | $0.0001 | $0.0010 | Haiku |
+| reasoning ("prove √2 irrational") | $0.0009 | $0.0088 | $0.0097 | Sonnet |
+| refuse ("which BP medication") | $0.0009 | $0.0000 | $0.0009 | none |
+
+**The payoff — cost/quality routing:** a single do-everything prompt forces one model on every input (overpay on easy, underperform on hard). The classifier breaks that bind — spend expensively only where it helps. The hard proof got Sonnet's rigor; the trivial fact got Haiku.
+
+**Gotcha — the classifier tax:** the classifier costs a flat ~$0.0009 on *every* request; on the simple route that's 9× the handler it routed to. Routing only nets out ahead when the cost spread between handlers dwarfs that tax. For a uniformly-cheap workload, always-Haiku beats routing.
+
+**Callbacks:** classifier uses forced tool use (Phase 1's `tool_choice`) with an `enum` to pin the label; the `refuse` route runs no LLM (mirrors Ex 04's pure-Python gate — a branch needn't call a model).
+
+Docs updated same turn (phase-4 progress 4/9→5/9, run order, "What Ex 05 adds", concepts 39–41, classifier-tax gotcha; root README status + tree; GLOSSARY routing/classifier/cost-quality; AGENTS). Next: Exercise 06 — parallelization (fan-out → vote/aggregate).

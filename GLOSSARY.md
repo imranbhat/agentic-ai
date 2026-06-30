@@ -101,6 +101,9 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **Building Effective Agents (BEA)** | Anthropic's canonical primer that splits LLM apps into *workflows* (deterministic chains) and *agents* (LLM-driven loops), and names five patterns: prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer. |
 | **Prompt chaining** | BEA pattern #1: a fixed sequence of LLM calls you wire in code, each feeding the next, with a *gate* between them. A workflow — *you* own the control flow, not the model. (Phase 4, Ex 04.) |
 | **Gate** | A cheap check *between* chain steps that decides whether the chain continues — often pure Python, no LLM. It's what makes a chain a chain rather than "calling the model twice"; it stops a bad step before the next paid one runs. |
+| **Routing** | BEA pattern #2: a *branch*. A cheap **classifier** inspects the input and dispatches it to exactly one specialized handler. Chaining is a sequence ("and then"); routing is a switch ("which one?"). (Phase 4, Ex 05.) |
+| **Classifier** | The cheap LLM call that labels an input so a router can branch (here Haiku + forced tool use → `{category, reason}`). Its cost is a flat per-request *tax*: routing only pays off when the handlers differ enough in cost/quality to justify it. |
+| **Cost/quality routing** | Using a router to send easy inputs to a cheap model, hard ones to a strong model, and out-of-scope ones to a $0 non-LLM path — instead of forcing one model on every input. The main reason routing earns its place. |
 
 ## Models and providers
 

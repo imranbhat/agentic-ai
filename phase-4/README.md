@@ -4,11 +4,11 @@
 
 **Ship deliverable (from the roadmap):** rebuild the **exact** Phase 3 research agent on the **Claude Agent SDK**, then compare lines of code, robustness, and behavior against the hand-rolled version.
 
-> **Status: 🚧 in progress (4/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
+> **Status: 🚧 in progress (5/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
 > patterns) are built in **plain Anthropic API** on purpose — they're workflows, and a framework would hide
 > the orchestration they're meant to teach. Exercise 09 adds **LangGraph** for a true 3-way comparison.
 
-## Progress — 4 of 9
+## Progress — 5 of 9
 
 | # | Deliverable | Status |
 |---|---|---|
@@ -16,8 +16,8 @@
 | 02 | [`02_research_agent_sdk.py`](02_research_agent_sdk.py) — **the ship**: Phase 3's research agent, ported to the SDK (same 3 tools, no hand-written loop) | ✅ shipped |
 | 03 | [`03_sdk_vs_scratch.md`](03_sdk_vs_scratch.md) — the comparison: LOC, robustness, behavior; what the framework adds and what it hides | ✅ shipped |
 | 04 | [`04_prompt_chaining.py`](04_prompt_chaining.py) — sequential LLM calls with a **gate** between them (the first BEA pattern) | ✅ shipped |
-| 05 | `05_routing.py` — a classifier sends input to a specialized handler | ⏳ next |
-| 06 | `06_parallelization.py` — fan-out, then vote/aggregate | ⏳ pending |
+| 05 | [`05_routing.py`](05_routing.py) — a classifier **branches** input to a specialized handler (cost/quality routing) | ✅ shipped |
+| 06 | `06_parallelization.py` — fan-out, then vote/aggregate | ⏳ next |
 | 07 | `07_orchestrator_workers.py` — central LLM dispatches subtasks to workers | ⏳ pending |
 | 08 | `08_evaluator_optimizer.py` — generate → critique → refine (the Phase 3 self-critique, framed as a pattern) | ⏳ pending |
 | 09 | `09_langgraph_research_agent.py` — breadth: the same agent on **LangGraph**, to feel graph-based control vs the SDK | ⏳ pending |
@@ -51,6 +51,11 @@ uv run phase-4/02_research_agent_sdk.py "Compare RAG vs fine-tuning for keeping 
 uv run phase-4/04_prompt_chaining.py "a CLI tool that turns git history into a changelog"
 uv run phase-4/04_prompt_chaining.py "a budgeting app for freelancers" --lang Spanish
 uv run phase-4/04_prompt_chaining.py "a note-taking app" --max-words 10   # force the GATE to fail → step ③ skipped
+
+# Exercise 05 ✅ — routing (BEA pattern #2): a cheap classifier BRANCHES to one specialized handler.
+uv run phase-4/05_routing.py "What is the capital of France?"              # → simple    (Haiku)
+uv run phase-4/05_routing.py "Prove that the square root of 2 is irrational."   # → reasoning (Sonnet)
+uv run phase-4/05_routing.py "Which blood pressure medication should I take?"   # → refuse    (no LLM, $0)
 ```
 
 ## What Exercise 01 adds: the SDK hello-world
@@ -219,6 +224,42 @@ verify → translate. **When not to:** if one call does the job, chaining is jus
 > just the simplest kind. And a chain needn't have a gate at all (`outline → draft → polish` is still a chain) —
 > decomposition makes it *chaining*; the gate makes it *robust*.
 
+## What Exercise 05 adds: routing (BEA pattern #2 — a branch, not a sequence)
+
+Where prompt chaining (Ex 04) runs every step in order, **routing makes a branch**: a cheap **classifier** call
+inspects the input and **exactly one** specialized handler runs.
+
+```
+input ──▶ classifier ──▶ ┌─ simple    → Haiku  handler (terse)
+             (LLM)       ├─ reasoning → Sonnet handler (thorough)
+                         └─ refuse    → canned message (NO LLM, $0)
+```
+
+| Chaining (Ex 04) | Routing (Ex 05) |
+|---|---|
+| "and then, and then" — all steps run | "which one?" — one handler runs |
+| gate decides *continue vs stop* | classifier decides *which path* |
+
+**The production payoff is cost/quality routing.** A single do-everything prompt forces one model on every
+input — you either overpay (Sonnet on "capital of France?") or underperform (Haiku on a hard proof). A cheap
+classifier breaks that bind: it decides *what kind* of question this is, then you spend expensively **only**
+where it helps. Measured on three inputs:
+
+| Route | Classifier | Handler | Total | Model |
+|---|---|---|---|---|
+| simple ("capital of France") | $0.0009 | $0.0001 | **$0.0010** | Haiku |
+| reasoning ("prove √2 irrational") | $0.0009 | $0.0088 | **$0.0097** | Sonnet |
+| refuse ("which BP medication") | $0.0009 | $0.0000 | **$0.0009** | none |
+
+Two callbacks to earlier exercises:
+1. **The classifier uses forced tool use** (Phase 1's `tool_choice`) — the category comes back as reliable JSON
+   `{category, reason}`, never prose you'd parse. An `enum` on the schema pins it to the three valid labels.
+2. **The `refuse` route runs no LLM** — a canned string, $0. Same lesson as Ex 04's pure-Python gate: a branch
+   doesn't have to call a model. Routing to a non-LLM path (refusal, cache hit, human handoff) is first-class.
+
+> **The model note:** the `reasoning` route defaults to **Sonnet** — a more expensive *Claude*, not a drift to
+> another provider. Spending more there is the whole point; the classifier and the simple route stay on Haiku.
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
@@ -237,6 +278,9 @@ verify → translate. **When not to:** if one call does the job, chaining is jus
 | 36 | **Prompt chaining** (BEA pattern #1) | A *workflow*: a fixed sequence of LLM calls you wire in Python, each step feeding the next, with a **gate** between them. Not an agent — *you* own the control flow. |
 | 37 | **Gate** | A cheap check *between* chain steps that decides whether to continue. Often pure Python (no LLM). The thing that distinguishes a chain from "calling the model twice." |
 | 38 | **Workflow (vs agent), made concrete** | Phase 3 built agents (model drives the loop). Exercises 04–08 build workflows (code drives the steps). Most "agents" should have been workflows — this is where you feel why. |
+| 39 | **Routing** (BEA pattern #2) | A *branch*: a cheap classifier inspects the input and dispatches to exactly one specialized handler. Chaining is a sequence; routing is a switch. |
+| 40 | **Classifier** | The cheap LLM call (here Haiku, forced tool use) that labels the input so the router can branch. Its cost is a flat per-request tax — see the gotcha. |
+| 41 | **Cost/quality routing** | The payoff of routing: send easy inputs to a cheap model, hard ones to a strong model, out-of-scope ones to a $0 non-LLM path — instead of forcing one model on everything. |
 
 ## Gotchas
 
@@ -247,3 +291,4 @@ verify → translate. **When not to:** if one call does the job, chaining is jus
 - **Blocking tools inside `async` (Ex 02).** Our ported `web_search`/`fetch_url` call synchronous `ddgs`/`httpx` inside an `async def`, which blocks the event loop for the call's duration. Fine for a single-user teaching script (nothing else is running), but a production port would use `httpx.AsyncClient` and run `ddgs` in a thread. We surfaced the shortcut in a comment rather than hiding it.
 - **`num_turns` ≠ Phase 3 "iterations" (Ex 02).** The SDK's `num_turns` (≈6 for the ReAct question) counts message exchanges, not model calls; Phase 3's loop counted ~4 model calls for the same work. Don't compare the two counters directly — compare cost and trajectory instead.
 - **Use `uv run python`, not `python3`, to inspect the SDK.** `python3` is the system interpreter and can't see the uv-managed venv (`ModuleNotFoundError: claude_agent_sdk`). Anything that imports project deps must go through `uv run`.
+- **Routing has a classifier tax (Ex 05).** The classifier costs a flat ~$0.0009 on *every* request — and on the `simple` route that's **9× the handler it routed to** ($0.0009 vs $0.0001). Routing only nets out ahead when the cost spread between handlers is big enough to dwarf that tax (the Sonnet route, ~$0.0088, is what justifies it). For a uniformly-cheap workload, always-Haiku beats routing. Don't add a router unless the routes genuinely differ in cost or quality.
