@@ -108,6 +108,9 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **Voting (aggregation)** | A parallelization flavor: run the *same* prompt N times and take the majority. Reduces variance on uncertain judgments — but only when the calls actually disagree; on a task the model already nails, it's N× cost for nothing. |
 | **Sectioning** | A parallelization flavor: split a task into *independent* subtasks, run them at once, stitch the pieces. The win is latency — there's no data dependency, so serializing would just waste wall-clock. |
 | **`asyncio.gather` / `AsyncAnthropic`** | Python's async machinery. `AsyncAnthropic` makes API calls awaitable so they overlap on the network; `asyncio.gather(*coros)` runs many at once and returns when all finish (≈ the slowest one's time). |
+| **Orchestrator-workers** | BEA pattern #4: a central *orchestrator* model plans subtasks, *worker* calls do them (usually in parallel), a *synthesizer* combines the results. Builds on parallelization, but a model call produces the list being fanned out. (Phase 4, Ex 07.) |
+| **Dynamic decomposition** | The defining trait of orchestrator-workers: the subtasks are chosen by the model at runtime and differ per input — unlike *sectioning*, where you hardcode the same subtasks every run. You own the *shape* (plan→work→synthesize); the model owns the *content* (which subtasks). |
+| **Workflow↔agent boundary** | The line orchestrator-workers sits right against. It stays a *workflow* because *you* fixed the control flow (one plan, one worker batch, one synthesis). Let the orchestrator *loop* on "is it done yet?" and the *model* owns control flow → it's now an *agent* (Phase 3's while-loop). |
 
 ## Models and providers
 

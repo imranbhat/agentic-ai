@@ -39,6 +39,8 @@ uv run phase-4/05_routing.py "Which blood pressure medication should I take?"   
 uv run phase-4/06_parallelization.py "a review to classify"             # BEA pattern #3: vote (fan-out, majority)
 uv run phase-4/06_parallelization.py "a topic" --mode section           # sectioning (independent subtasks at once)
 uv run phase-4/06_parallelization.py "a review" --sequential            # same cost, slower — proves it's latency-only
+uv run phase-4/07_orchestrator_workers.py "a briefing topic"            # BEA pattern #4: plan → parallel workers → synthesize
+uv run phase-4/07_orchestrator_workers.py "a topic" --synth-model claude-sonnet-4-6   # stronger editor at the join
 ```
 
 `phase-4/02_research_agent_sdk.py` is a faithful port of `phase-3/05_research_agent.py`: identical three tools, now registered as one in-process MCP server (`@tool` + `create_sdk_mcp_server`). Writes to `phase-4/reports/`, **which is tracked** (sample output, like `phase-3/reports/`). Faithful-port options: `tools=[]` (no built-in tools), `setting_sources=[]` (isolation — no `CLAUDE.md`), `system_prompt=<string>` (replaces the preset), `max_turns=15` (built-in loop guard), `permission_mode="bypassPermissions"`. Inspect SDK objects with `uv run python -c ...`, never bare `python3` (system interpreter can't see the venv).

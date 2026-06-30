@@ -1134,3 +1134,19 @@ Captured in phase-4/README → "Two refinements (from a mid-phase Q&A)".
 **Gotcha — parallel wall-clock is noisy:** two identical parallel runs clocked 1.15s and 4.86s (network jitter). Parallel time ≈ slowest call in the batch; compare parallel-vs-sequential within the same conditions, not across runs.
 
 Docs updated same turn (phase-4 progress 5/9→6/9, run order, "What Ex 06 adds", concepts 42–44, two gotchas; root README status + tree; GLOSSARY parallelization/voting/sectioning/asyncio; AGENTS). Next: Exercise 07 — orchestrator-workers.
+
+## Exercise 07 — orchestrator-workers (BEA pattern #4, dynamic decomposition)
+
+**What it is:** a central **orchestrator** model plans subtasks → **workers** do them in parallel (Ex 06's `asyncio.gather`) → a **synthesizer** combines. Shape: `plan → workers → synthesize`.
+
+**The defining trait — dynamic decomposition.** Unlike Ex 06 sectioning (subtasks hardcoded: headline/features/tagline every run), the orchestrator *invents* the subtasks at runtime, so two topics yield two different plans:
+- "remote work" → Productivity · Culture · Operational Costs · Talent
+- "JWST early universe" → Infrared Tech · Redshift · Key Discoveries · Observational Methods
+
+Nothing shared — each fits its topic. You own the *shape*; the model owns the *content* (which subtasks). Both runs: 6 calls (1 plan + 4 workers + 1 synth), ~$0.0056 / ~$0.0074.
+
+**Synthesizer = cost/quality upgrade point:** it reordered JWST's sections and trimmed redundancy (not just concat). `--synth-model claude-sonnet-4-6` spends there while workers stay Haiku (callback to Ex 05).
+
+**"Still a workflow, or an agent?"** Still a workflow — control flow fixed by us (plan once → work once → synth once, no loop). Model picks step *content*, not *structure*. Let the orchestrator loop on "is it done?" → model owns control flow → agent (Phase 3 while-loop). This stops one step short; Ex 08 adds the loop back.
+
+Docs updated same turn (phase-4 progress 6/9→7/9, run order, "What Ex 07 adds", concepts 45–47; root README status + tree; GLOSSARY orchestrator-workers/dynamic-decomposition/boundary; AGENTS). Next: Exercise 08 — evaluator-optimizer (the loop returns).

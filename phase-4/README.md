@@ -4,11 +4,11 @@
 
 **Ship deliverable (from the roadmap):** rebuild the **exact** Phase 3 research agent on the **Claude Agent SDK**, then compare lines of code, robustness, and behavior against the hand-rolled version.
 
-> **Status: 🚧 in progress (6/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
+> **Status: 🚧 in progress (7/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
 > patterns) are built in **plain Anthropic API** on purpose — they're workflows, and a framework would hide
 > the orchestration they're meant to teach. Exercise 09 adds **LangGraph** for a true 3-way comparison.
 
-## Progress — 6 of 9
+## Progress — 7 of 9
 
 | # | Deliverable | Status |
 |---|---|---|
@@ -18,8 +18,8 @@
 | 04 | [`04_prompt_chaining.py`](04_prompt_chaining.py) — sequential LLM calls with a **gate** between them (the first BEA pattern) | ✅ shipped |
 | 05 | [`05_routing.py`](05_routing.py) — a classifier **branches** input to a specialized handler (cost/quality routing) | ✅ shipped |
 | 06 | [`06_parallelization.py`](06_parallelization.py) — fan-out concurrent calls, then **vote** or **section**-aggregate (async) | ✅ shipped |
-| 07 | `07_orchestrator_workers.py` — central LLM dispatches subtasks to workers | ⏳ next |
-| 08 | `08_evaluator_optimizer.py` — generate → critique → refine (the Phase 3 self-critique, framed as a pattern) | ⏳ pending |
+| 07 | [`07_orchestrator_workers.py`](07_orchestrator_workers.py) — a model **dynamically plans** subtasks, workers run them in parallel, a synthesizer combines | ✅ shipped |
+| 08 | `08_evaluator_optimizer.py` — generate → critique → refine (the Phase 3 self-critique, framed as a pattern) | ⏳ next |
 | 09 | `09_langgraph_research_agent.py` — breadth: the same agent on **LangGraph**, to feel graph-based control vs the SDK | ⏳ pending |
 
 ## The one idea behind this phase
@@ -61,6 +61,11 @@ uv run phase-4/05_routing.py "Which blood pressure medication should I take?"   
 uv run phase-4/06_parallelization.py "Stunning visuals but the plot dragged and I nearly left."   # vote (majority)
 uv run phase-4/06_parallelization.py "Stunning visuals but the plot dragged and I nearly left." --sequential  # same cost, slower
 uv run phase-4/06_parallelization.py "a password manager for families" --mode section   # independent subtasks at once
+
+# Exercise 07 ✅ — orchestrator-workers (BEA pattern #4): a model PLANS subtasks, workers run them, a synthesizer combines.
+uv run phase-4/07_orchestrator_workers.py "the impact of remote work on companies"
+uv run phase-4/07_orchestrator_workers.py "how the James Webb Space Telescope sees the early universe"   # note: a DIFFERENT plan
+uv run phase-4/07_orchestrator_workers.py "a topic" --synth-model claude-sonnet-4-6   # stronger editor at the join
 ```
 
 ## What Exercise 01 adds: the SDK hello-world
@@ -312,6 +317,42 @@ overlap on the network instead of blocking each other; `asyncio.gather` schedule
 > or **high-recall guardrails** ("flag if *any* of N says unsafe" — valuable precisely to catch the rare
 > dissent). Don't reach for voting on a task your model already nails consistently.
 
+## What Exercise 07 adds: orchestrator-workers (BEA pattern #4 — dynamic decomposition)
+
+A central **orchestrator** LLM reads the task and *decides how to break it up*, dispatches each subtask to a
+**worker** call (in parallel — this reuses Ex 06's `asyncio.gather`), then a **synthesizer** combines the
+results.
+
+```
+topic ─▶ ORCHESTRATOR ─▶ plan = [sub₁ … subₙ]   →  workerᵢ (all at once)  →  SYNTHESIZER ─▶ final
+            (model invents the subtasks)            (parallel fan-out)        (stitch + smooth)
+```
+
+**The one thing that separates it from Ex 06 sectioning:** there, the subtasks were fixed in your code
+(`headline/features/tagline`, every run). Here **the model invents the subtasks at runtime** — so two topics
+produce two different plans:
+
+| Topic | Plan the orchestrator generated |
+|---|---|
+| "impact of remote work" | Productivity · Culture & Team Dynamics · Operational Costs · Talent |
+| "how JWST sees the early universe" | Infrared Tech · Redshift & Light-Travel · Key Discoveries · Observational Methods |
+
+Nothing shared — each plan fits *its* topic. You own the **shape** (plan → work → synthesize); the model owns
+the **content** (which subtasks). Both runs were 6 calls (1 plan + 4 workers + 1 synth) at ~$0.0056 / ~$0.0074.
+
+**The synthesizer is the natural cost/quality upgrade point.** It didn't just concatenate — on the JWST run it
+*reordered* sections and trimmed cross-section redundancy. Quality matters most at the join, so `--synth-model
+claude-sonnet-4-6` lets you spend there while workers stay on Haiku (a callback to Ex 05's cost/quality idea).
+
+### "Is this still a workflow, or an agent?" — the question this pattern forces
+
+**Still a workflow.** The control flow is fixed and *you* wrote it: exactly one plan, one parallel worker batch,
+one synthesis — no loop, no "do I need another round?" decision. The model chooses the **content** of the steps
+(which subtasks), never the **structure** (how many phases, whether to repeat). The moment you let the
+orchestrator *loop* — "look at the draft, decide if it needs more workers, repeat until satisfied" — the **model**
+owns the control flow and you've crossed into an **agent** (Phase 3's while-loop). This exercise stops one step
+short of that line on purpose; Exercise 08 (evaluator-optimizer) adds the loop back.
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
@@ -336,6 +377,9 @@ overlap on the network instead of blocking each other; `asyncio.gather` schedule
 | 42 | **Parallelization** (BEA pattern #3) | Fan out multiple LLM calls *concurrently*, then aggregate. The first non-sequential pattern. Changes latency, not cost. |
 | 43 | **Voting vs sectioning** | The two flavors of parallelization. *Voting*: same prompt N×, majority-aggregate (reliability). *Sectioning*: independent subtasks at once, stitch (latency). |
 | 44 | **`AsyncAnthropic` + `asyncio.gather`** | The async machinery concurrency needs: `await`ed calls overlap on the network instead of blocking; `gather` schedules them together so total time ≈ the slowest one. |
+| 45 | **Orchestrator-workers** (BEA pattern #4) | A model *plans* subtasks, workers do them (in parallel), a synthesizer combines. Builds on parallelization — but a model call produces the list being fanned out. |
+| 46 | **Dynamic decomposition** | The defining trait of orchestrator-workers: the subtasks are decided by the model at runtime (different per input), not fixed in your code like Ex 06's sections. You own the *shape*; the model owns the *content*. |
+| 47 | **Workflow↔agent boundary** | Orchestrator-workers is the closest workflow to an agent. It stays a workflow because the control flow (plan→work→synthesize, once) is fixed by you. Let the orchestrator *loop* on "is it done?" and the model owns control flow → agent. |
 
 ## Gotchas
 
