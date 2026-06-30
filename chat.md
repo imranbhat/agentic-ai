@@ -1105,3 +1105,11 @@ Docs updated same turn (phase-4 progress 3/9→4/9, run order, "What Ex 04 adds"
 **Callbacks:** classifier uses forced tool use (Phase 1's `tool_choice`) with an `enum` to pin the label; the `refuse` route runs no LLM (mirrors Ex 04's pure-Python gate — a branch needn't call a model).
 
 Docs updated same turn (phase-4 progress 4/9→5/9, run order, "What Ex 05 adds", concepts 39–41, classifier-tax gotcha; root README status + tree; GLOSSARY routing/classifier/cost-quality; AGENTS). Next: Exercise 06 — parallelization (fan-out → vote/aggregate).
+
+### Ex 05 follow-up Q&A — classifier needn't be an LLM; patterns compose
+
+Two refinements on routing:
+1. **Classifier ≠ always a model.** We pay the tax only because we chose a Haiku classifier. Routing can use a deterministic classifier (keywords, regex, intent model, embeddings, rules) → $0 tax. Use an LLM classifier only when the decision is too fuzzy for cheap code. (Same shape as Ex 04's gate.)
+2. **The 5 BEA patterns compose.** A route's handler can be another router, a chain, or an agent loop — real systems are a *tree* of blocks. `classify→handle→classify→handle` is fine **as a workflow IF you hardcoded it**; if the loop repeats "until done" by the *model's* judgment, you've crossed into an *agent*. The line is the Phase 3 one: who owns the control flow — your code (workflow) or the model (agent).
+
+Captured in phase-4/README → "Two refinements (from a mid-phase Q&A)".

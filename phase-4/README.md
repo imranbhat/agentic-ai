@@ -260,6 +260,23 @@ Two callbacks to earlier exercises:
 > **The model note:** the `reasoning` route defaults to **Sonnet** — a more expensive *Claude*, not a drift to
 > another provider. Spending more there is the whole point; the classifier and the simple route stay on Haiku.
 
+### Two refinements (from a mid-phase Q&A)
+
+**The classifier doesn't have to be an LLM.** We used a Haiku classifier, so we pay the tax every request — but
+that's a *choice*, not a requirement. BEA says routing "can be handled by an LLM **or a more traditional
+classification algorithm**": keyword/regex match, an intent model, embedding-similarity, a rules table. If the
+categories are clean enough to detect in Python, you route for **$0** — no tax. Use an *LLM* classifier only
+when the routing decision is too fuzzy for cheap code (ours — "reasoning vs. medical advice?" — is). Same shape
+as Ex 04's gate: the classifier step might not need a model either.
+
+**The five patterns compose — they aren't five separate choices.** A route's *handler* can itself be another
+router (coarse → fine), a chain (Ex 04), or a full agent loop. Real systems are a *tree* of these blocks, not
+one in isolation. `classify → handle → classify → handle …` is valid — **but watch the boundary**: if *you*
+hardcoded that structure it's still a **workflow**; if the cycle repeats "until done" and the **model** decides
+whether to loop again, you've crossed into an **agent**. The dividing line is the Phase 3 one — *who owns the
+control flow, your code or the model?* Compose freely; just always know which side of that line you're on, because
+it changes how you cost, debug, and guardrail the system.
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
