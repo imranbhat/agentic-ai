@@ -104,6 +104,10 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **Routing** | BEA pattern #2: a *branch*. A cheap **classifier** inspects the input and dispatches it to exactly one specialized handler. Chaining is a sequence ("and then"); routing is a switch ("which one?"). (Phase 4, Ex 05.) |
 | **Classifier** | The cheap LLM call that labels an input so a router can branch (here Haiku + forced tool use → `{category, reason}`). Its cost is a flat per-request *tax*: routing only pays off when the handlers differ enough in cost/quality to justify it. |
 | **Cost/quality routing** | Using a router to send easy inputs to a cheap model, hard ones to a strong model, and out-of-scope ones to a $0 non-LLM path — instead of forcing one model on every input. The main reason routing earns its place. |
+| **Parallelization** | BEA pattern #3: fan out several LLM calls *concurrently*, then aggregate. The first non-sequential pattern. Changes *latency* (N calls in ≈ one call's time), not cost (you still pay N×). (Phase 4, Ex 06.) |
+| **Voting (aggregation)** | A parallelization flavor: run the *same* prompt N times and take the majority. Reduces variance on uncertain judgments — but only when the calls actually disagree; on a task the model already nails, it's N× cost for nothing. |
+| **Sectioning** | A parallelization flavor: split a task into *independent* subtasks, run them at once, stitch the pieces. The win is latency — there's no data dependency, so serializing would just waste wall-clock. |
+| **`asyncio.gather` / `AsyncAnthropic`** | Python's async machinery. `AsyncAnthropic` makes API calls awaitable so they overlap on the network; `asyncio.gather(*coros)` runs many at once and returns when all finish (≈ the slowest one's time). |
 
 ## Models and providers
 

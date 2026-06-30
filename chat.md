@@ -1113,3 +1113,24 @@ Two refinements on routing:
 2. **The 5 BEA patterns compose.** A route's handler can be another router, a chain, or an agent loop — real systems are a *tree* of blocks. `classify→handle→classify→handle` is fine **as a workflow IF you hardcoded it**; if the loop repeats "until done" by the *model's* judgment, you've crossed into an *agent*. The line is the Phase 3 one: who owns the control flow — your code (workflow) or the model (agent).
 
 Captured in phase-4/README → "Two refinements (from a mid-phase Q&A)".
+
+## Exercise 06 — parallelization (BEA pattern #3, first non-sequential)
+
+**What it is:** fan out multiple LLM calls *concurrently* (`AsyncAnthropic` + `asyncio.gather`), then aggregate. Two flavors (`--mode`):
+- **vote** — same prompt N×, majority-aggregate → reliability (when there's variance).
+- **section** — independent subtasks at once, stitch → latency.
+
+**Measured:**
+| Run | Result | Cost | Wall-clock |
+|---|---|---|---|
+| vote ×5 parallel | negative×5 | $0.0035 | 1.15s |
+| vote ×5 sequential (same calls) | negative×5 | $0.0035 | 4.35s |
+| section ×3 parallel | 3 stitched sections | $0.0004 | 1.88s |
+
+**The keeper:** same $0.0035, 4.35s→1.15s. Parallelization changes **latency, not cost** — you still pay N× a single call. `--sequential` proves it (same calls, same cost, balloon wall-clock).
+
+**Honest finding — voting didn't split.** Borderline reviews came back unanimous (negative×5, then positive×7): a capable model at temp 1.0 is already consistent on sentiment, so voting paid N× for nothing. Voting only helps with genuine variance — subjective/hard tasks, weaker models, or high-recall guardrails ("flag if ANY of N flags"). Match pattern to task (same rule as Phase 3 self-critique).
+
+**Gotcha — parallel wall-clock is noisy:** two identical parallel runs clocked 1.15s and 4.86s (network jitter). Parallel time ≈ slowest call in the batch; compare parallel-vs-sequential within the same conditions, not across runs.
+
+Docs updated same turn (phase-4 progress 5/9→6/9, run order, "What Ex 06 adds", concepts 42–44, two gotchas; root README status + tree; GLOSSARY parallelization/voting/sectioning/asyncio; AGENTS). Next: Exercise 07 — orchestrator-workers.

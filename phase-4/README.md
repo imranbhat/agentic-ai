@@ -4,11 +4,11 @@
 
 **Ship deliverable (from the roadmap):** rebuild the **exact** Phase 3 research agent on the **Claude Agent SDK**, then compare lines of code, robustness, and behavior against the hand-rolled version.
 
-> **Status: 🚧 in progress (5/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
+> **Status: 🚧 in progress (6/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
 > patterns) are built in **plain Anthropic API** on purpose — they're workflows, and a framework would hide
 > the orchestration they're meant to teach. Exercise 09 adds **LangGraph** for a true 3-way comparison.
 
-## Progress — 5 of 9
+## Progress — 6 of 9
 
 | # | Deliverable | Status |
 |---|---|---|
@@ -17,8 +17,8 @@
 | 03 | [`03_sdk_vs_scratch.md`](03_sdk_vs_scratch.md) — the comparison: LOC, robustness, behavior; what the framework adds and what it hides | ✅ shipped |
 | 04 | [`04_prompt_chaining.py`](04_prompt_chaining.py) — sequential LLM calls with a **gate** between them (the first BEA pattern) | ✅ shipped |
 | 05 | [`05_routing.py`](05_routing.py) — a classifier **branches** input to a specialized handler (cost/quality routing) | ✅ shipped |
-| 06 | `06_parallelization.py` — fan-out, then vote/aggregate | ⏳ next |
-| 07 | `07_orchestrator_workers.py` — central LLM dispatches subtasks to workers | ⏳ pending |
+| 06 | [`06_parallelization.py`](06_parallelization.py) — fan-out concurrent calls, then **vote** or **section**-aggregate (async) | ✅ shipped |
+| 07 | `07_orchestrator_workers.py` — central LLM dispatches subtasks to workers | ⏳ next |
 | 08 | `08_evaluator_optimizer.py` — generate → critique → refine (the Phase 3 self-critique, framed as a pattern) | ⏳ pending |
 | 09 | `09_langgraph_research_agent.py` — breadth: the same agent on **LangGraph**, to feel graph-based control vs the SDK | ⏳ pending |
 
@@ -56,6 +56,11 @@ uv run phase-4/04_prompt_chaining.py "a note-taking app" --max-words 10   # forc
 uv run phase-4/05_routing.py "What is the capital of France?"              # → simple    (Haiku)
 uv run phase-4/05_routing.py "Prove that the square root of 2 is irrational."   # → reasoning (Sonnet)
 uv run phase-4/05_routing.py "Which blood pressure medication should I take?"   # → refuse    (no LLM, $0)
+
+# Exercise 06 ✅ — parallelization (BEA pattern #3): fan out concurrent calls, then aggregate. Async.
+uv run phase-4/06_parallelization.py "Stunning visuals but the plot dragged and I nearly left."   # vote (majority)
+uv run phase-4/06_parallelization.py "Stunning visuals but the plot dragged and I nearly left." --sequential  # same cost, slower
+uv run phase-4/06_parallelization.py "a password manager for families" --mode section   # independent subtasks at once
 ```
 
 ## What Exercise 01 adds: the SDK hello-world
@@ -277,6 +282,36 @@ whether to loop again, you've crossed into an **agent**. The dividing line is th
 control flow, your code or the model?* Compose freely; just always know which side of that line you're on, because
 it changes how you cost, debug, and guardrail the system.
 
+## What Exercise 06 adds: parallelization (BEA pattern #3 — the first non-sequential one)
+
+Chaining (04) and routing (05) ran one call at a time. Parallelization **fans out multiple calls at once**, then
+aggregates. Two flavors, both in the file (`--mode`):
+
+- **vote** — run the *same* prompt N times in parallel, aggregate by **majority**. Buys *reliability* (when there's variance to reduce).
+- **section** — split a task into *independent* subtasks, run them at once, **stitch**. Buys *latency*.
+
+**What it changes — and what it doesn't.** It changes **latency**: N concurrent calls finish in ≈ one call's
+wall-clock. It does **not** reduce cost — you make N calls, so you pay N× a single call, every time. The
+`--sequential` flag proves it by running the *same* calls one-by-one:
+
+| Run | Result | Cost | Wall-clock |
+|---|---|---|---|
+| vote ×5 **parallel** | negative×5 | $0.0035 | **1.15s** |
+| vote ×5 **sequential** (identical calls) | negative×5 | $0.0035 | **4.35s** |
+| section ×3 parallel | 3 stitched sections | $0.0004 | 1.88s |
+
+Same `$0.0035`, 4.35s → 1.15s. `asyncio.gather` removed *latency and only latency*.
+
+**Why async here (not in 04/05):** concurrency needs it. We use `AsyncAnthropic` so the `await`ed calls actually
+overlap on the network instead of blocking each other; `asyncio.gather` schedules them together.
+
+> **The voting result is a lesson in itself: it didn't split.** Every borderline review came back unanimous
+> (negative×5, then positive×7) because a capable model at temp 1.0 is *already consistent* on sentiment — there
+> was no variance to reduce, so the 5–7 votes just paid N× for agreement. **Voting only earns its keep when the
+> calls genuinely disagree:** subjective/hard judgments where the model wavers, weaker models with more variance,
+> or **high-recall guardrails** ("flag if *any* of N says unsafe" — valuable precisely to catch the rare
+> dissent). Don't reach for voting on a task your model already nails consistently.
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
@@ -298,6 +333,9 @@ it changes how you cost, debug, and guardrail the system.
 | 39 | **Routing** (BEA pattern #2) | A *branch*: a cheap classifier inspects the input and dispatches to exactly one specialized handler. Chaining is a sequence; routing is a switch. |
 | 40 | **Classifier** | The cheap LLM call (here Haiku, forced tool use) that labels the input so the router can branch. Its cost is a flat per-request tax — see the gotcha. |
 | 41 | **Cost/quality routing** | The payoff of routing: send easy inputs to a cheap model, hard ones to a strong model, out-of-scope ones to a $0 non-LLM path — instead of forcing one model on everything. |
+| 42 | **Parallelization** (BEA pattern #3) | Fan out multiple LLM calls *concurrently*, then aggregate. The first non-sequential pattern. Changes latency, not cost. |
+| 43 | **Voting vs sectioning** | The two flavors of parallelization. *Voting*: same prompt N×, majority-aggregate (reliability). *Sectioning*: independent subtasks at once, stitch (latency). |
+| 44 | **`AsyncAnthropic` + `asyncio.gather`** | The async machinery concurrency needs: `await`ed calls overlap on the network instead of blocking; `gather` schedules them together so total time ≈ the slowest one. |
 
 ## Gotchas
 
@@ -309,3 +347,5 @@ it changes how you cost, debug, and guardrail the system.
 - **`num_turns` ≠ Phase 3 "iterations" (Ex 02).** The SDK's `num_turns` (≈6 for the ReAct question) counts message exchanges, not model calls; Phase 3's loop counted ~4 model calls for the same work. Don't compare the two counters directly — compare cost and trajectory instead.
 - **Use `uv run python`, not `python3`, to inspect the SDK.** `python3` is the system interpreter and can't see the uv-managed venv (`ModuleNotFoundError: claude_agent_sdk`). Anything that imports project deps must go through `uv run`.
 - **Routing has a classifier tax (Ex 05).** The classifier costs a flat ~$0.0009 on *every* request — and on the `simple` route that's **9× the handler it routed to** ($0.0009 vs $0.0001). Routing only nets out ahead when the cost spread between handlers is big enough to dwarf that tax (the Sonnet route, ~$0.0088, is what justifies it). For a uniformly-cheap workload, always-Haiku beats routing. Don't add a router unless the routes genuinely differ in cost or quality.
+- **Parallel wall-clock is noisy (Ex 06).** Two identical 5-call parallel runs clocked 1.15s and 4.86s — network/load jitter, not your code. Parallel time ≈ the *slowest* call in the batch, and the slowest call varies run to run. Compare parallel-vs-sequential *within the same conditions* (the 1.15s vs 4.35s pair), not across separate runs.
+- **Voting needs variance to be worth it (Ex 06).** Our borderline reviews came back unanimous (negative×5, positive×7) — a capable model at temp 1.0 was already consistent, so the votes paid N× for nothing. Voting earns its keep only on genuinely uncertain/subjective tasks, weaker models, or high-recall guardrails ("flag if *any* of N flags"). Match the pattern to the task — same rule as Phase 3's self-critique.
