@@ -210,6 +210,15 @@ and "loop that fixes" separate is intentional: they're two different BEA pattern
 little latency (more sequential calls) for higher accuracy per step — outline → check → write; generate →
 verify → translate. **When not to:** if one call does the job, chaining is just added cost and latency.
 
+> **Don't misread the cost table above.** The headline reason to chain is **accuracy**, not cost — you split a
+> hard task into simpler subtasks so each call does one easy job reliably. Chaining normally *increases* total
+> cost and latency (you make *more* calls). The fail-fast savings (`$0.0003` vs `$0.0006`) is a **failure-case
+> cushion**, not the goal: it only kicks in when the gate *rejects* a step. You reach for chaining to be
+> *right*, and fail-fast just softens the bill when a step is bad. Also note: a gate can do more than **stop** —
+> it can trigger a **retry/fix** (that's Exercise 08) or **route** to a different next step; "stop on fail" is
+> just the simplest kind. And a chain needn't have a gate at all (`outline → draft → polish` is still a chain) —
+> decomposition makes it *chaining*; the gate makes it *robust*.
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
