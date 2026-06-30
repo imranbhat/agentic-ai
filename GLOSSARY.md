@@ -99,6 +99,8 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **Phase 3 (no MCP) vs SDK (MCP)** | Phase 3 passed raw tool-schema dicts inline and *your loop* dispatched calls directly (`fn(**input)`). The SDK is MCP-first: the only way to give it your functions is as a server, and *it* dispatches the calls over MCP. Same effect, standardized interface. |
 | **Project-aware (by default)** | The Agent SDK auto-loads the working directory and `CLAUDE.md`, so the agent "knows" the repo it runs in — unlike the raw API, where the model sees only your `messages`. Convenient, but adds input cost. |
 | **Building Effective Agents (BEA)** | Anthropic's canonical primer that splits LLM apps into *workflows* (deterministic chains) and *agents* (LLM-driven loops), and names five patterns: prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer. |
+| **Prompt chaining** | BEA pattern #1: a fixed sequence of LLM calls you wire in code, each feeding the next, with a *gate* between them. A workflow — *you* own the control flow, not the model. (Phase 4, Ex 04.) |
+| **Gate** | A cheap check *between* chain steps that decides whether the chain continues — often pure Python, no LLM. It's what makes a chain a chain rather than "calling the model twice"; it stops a bad step before the next paid one runs. |
 
 ## Models and providers
 

@@ -32,6 +32,8 @@ uv run phase-3/evals/eval_research.py                   # 5-dimension agent eval
 uv run phase-4/01_sdk_hello.py                          # Claude Agent SDK hello-world (async, no while loop)
 uv run phase-4/01_sdk_hello.py "your question"
 uv run phase-4/02_research_agent_sdk.py "your question"  # Phase 3 research agent, ported to the SDK → cited report
+uv run phase-4/04_prompt_chaining.py "a product idea"   # BEA pattern #1: draft → gate → translate (plain anthropic)
+uv run phase-4/04_prompt_chaining.py "a note-taking app" --max-words 10   # force the gate to fail
 ```
 
 `phase-4/02_research_agent_sdk.py` is a faithful port of `phase-3/05_research_agent.py`: identical three tools, now registered as one in-process MCP server (`@tool` + `create_sdk_mcp_server`). Writes to `phase-4/reports/`, **which is tracked** (sample output, like `phase-3/reports/`). Faithful-port options: `tools=[]` (no built-in tools), `setting_sources=[]` (isolation — no `CLAUDE.md`), `system_prompt=<string>` (replaces the preset), `max_turns=15` (built-in loop guard), `permission_mode="bypassPermissions"`. Inspect SDK objects with `uv run python -c ...`, never bare `python3` (system interpreter can't see the venv).

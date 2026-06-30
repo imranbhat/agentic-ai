@@ -4,19 +4,19 @@
 
 **Ship deliverable (from the roadmap):** rebuild the **exact** Phase 3 research agent on the **Claude Agent SDK**, then compare lines of code, robustness, and behavior against the hand-rolled version.
 
-> **Status: 🚧 in progress (3/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
+> **Status: 🚧 in progress (4/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
 > patterns) are built in **plain Anthropic API** on purpose — they're workflows, and a framework would hide
 > the orchestration they're meant to teach. Exercise 09 adds **LangGraph** for a true 3-way comparison.
 
-## Progress — 3 of 9
+## Progress — 4 of 9
 
 | # | Deliverable | Status |
 |---|---|---|
 | 01 | [`01_sdk_hello.py`](01_sdk_hello.py) — SDK hello-world: the simplest `query()`, the typed message stream, cost computed for you | ✅ shipped |
 | 02 | [`02_research_agent_sdk.py`](02_research_agent_sdk.py) — **the ship**: Phase 3's research agent, ported to the SDK (same 3 tools, no hand-written loop) | ✅ shipped |
 | 03 | [`03_sdk_vs_scratch.md`](03_sdk_vs_scratch.md) — the comparison: LOC, robustness, behavior; what the framework adds and what it hides | ✅ shipped |
-| 04 | `04_prompt_chaining.py` — sequential LLM calls with a gate between them | ⏳ next |
-| 05 | `05_routing.py` — a classifier sends input to a specialized handler | ⏳ pending |
+| 04 | [`04_prompt_chaining.py`](04_prompt_chaining.py) — sequential LLM calls with a **gate** between them (the first BEA pattern) | ✅ shipped |
+| 05 | `05_routing.py` — a classifier sends input to a specialized handler | ⏳ next |
 | 06 | `06_parallelization.py` — fan-out, then vote/aggregate | ⏳ pending |
 | 07 | `07_orchestrator_workers.py` — central LLM dispatches subtasks to workers | ⏳ pending |
 | 08 | `08_evaluator_optimizer.py` — generate → critique → refine (the Phase 3 self-critique, framed as a pattern) | ⏳ pending |
@@ -46,6 +46,11 @@ uv run phase-4/01_sdk_hello.py "Explain what an agent loop is in two sentences."
 uv run phase-4/02_research_agent_sdk.py "What is the ReAct prompting pattern and who introduced it?"
 uv run phase-4/02_research_agent_sdk.py "Compare RAG vs fine-tuning for keeping an LLM current" --model claude-sonnet-4-6
 # reports are written to phase-4/reports/ (checked in as sample output)
+
+# Exercise 04 ✅ — prompt chaining (BEA pattern #1): draft → GATE → translate. Plain anthropic, no framework.
+uv run phase-4/04_prompt_chaining.py "a CLI tool that turns git history into a changelog"
+uv run phase-4/04_prompt_chaining.py "a budgeting app for freelancers" --lang Spanish
+uv run phase-4/04_prompt_chaining.py "a note-taking app" --max-words 10   # force the GATE to fail → step ③ skipped
 ```
 
 ## What Exercise 01 adds: the SDK hello-world
@@ -171,6 +176,40 @@ reach for the SDK once the loop is settled and you'd rather not maintain retries
 wiring yourself. You can only judge that trade *because* you wrote the loop by hand first — which is why Phase 3
 came before Phase 4. The full tables (what the framework adds, what it hides) are in the writeup.
 
+## What Exercise 04 adds: prompt chaining (BEA pattern #1 — and the first *workflow*)
+
+Exercises 01–03 were about an **agent** (the model drives an open-ended loop). Exercise 04 flips to the other
+half of *Building Effective Agents*: a **workflow** — a fixed sequence of steps **you** wire in Python. No
+while-loop, no tool use, no framework. Just `messages.create()` calls with control flow around them.
+
+```
+topic ──▶ ① draft blurb ──▶ ②  GATE  ──▶ ③ translate ──▶ done
+              (LLM)        (pure Python)     (LLM)
+                               │
+                               └─ fails ──▶ STOP (skip the paid step ③)
+```
+
+**The one idea: the GATE is what makes this a chain.** Calling the model twice in a row is not prompt chaining
+— the check *between* the calls is. The gate here is pure Python (`len(text.split())` + a hype-word set), which
+is itself a lesson: **not every step needs an LLM.** A free check that stops a bad draft before the paid
+translate call is the entire value proposition.
+
+| Run | What you see |
+|---|---|
+| `"…changelog"` (defaults) | ① 31-word blurb → ② gate **passes** → ③ French translation. 2 LLM calls + 1 gate, **$0.0006**. |
+| `"a note-taking app" --max-words 10` | ① 43-word blurb → ② gate **fails** (`too long`) → **chain stops**. Step ③ never runs — **$0.0003**, half the bill. |
+
+That cost difference *is* the takeaway: the gate is a cheap guard that protects the expensive downstream step.
+
+**Deliberate non-overlap with Exercise 08.** Here the gate's only job is to **stop**. Looping its feedback back
+into step ① to *improve* the draft is a different pattern — generate→critique→retry, the
+**evaluator-optimizer** (Exercise 08, and the descendant of Phase 3's self-critique). Keeping "gate that stops"
+and "loop that fixes" separate is intentional: they're two different BEA patterns.
+
+**When to reach for prompt chaining:** when a task cleanly decomposes into fixed subtasks and you'll trade a
+little latency (more sequential calls) for higher accuracy per step — outline → check → write; generate →
+verify → translate. **When not to:** if one call does the job, chaining is just added cost and latency.
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
@@ -186,6 +225,9 @@ came before Phase 4. The full tables (what the framework adds, what it hides) ar
 | 33 | **`max_turns` (built-in loop guard)** | The SDK config field that replaces Phase 3's hand-written max-iteration cap. Also `max_budget_usd` for a built-in cost ceiling. |
 | 34 | **Isolation (`setting_sources=[]`)** | Tell the SDK to load *no* project settings — so the agent does **not** read `CLAUDE.md`. The deliberate opposite of Exercise 01's default project-awareness. |
 | 35 | **`permission_mode`** | Governs whether tool calls need approval. `"bypassPermissions"` runs non-interactively; the default would prompt for non-allowlisted tools. |
+| 36 | **Prompt chaining** (BEA pattern #1) | A *workflow*: a fixed sequence of LLM calls you wire in Python, each step feeding the next, with a **gate** between them. Not an agent — *you* own the control flow. |
+| 37 | **Gate** | A cheap check *between* chain steps that decides whether to continue. Often pure Python (no LLM). The thing that distinguishes a chain from "calling the model twice." |
+| 38 | **Workflow (vs agent), made concrete** | Phase 3 built agents (model drives the loop). Exercises 04–08 build workflows (code drives the steps). Most "agents" should have been workflows — this is where you feel why. |
 
 ## Gotchas
 

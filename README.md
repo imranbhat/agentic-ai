@@ -27,7 +27,7 @@ Each phase has its own README with run order, concepts, and gotchas.
 | [Phase 1](phase-1/README.md) | LLM mental model — tokens, streaming, tool use, structured output, evals | ✅ shipped |
 | [Phase 2](phase-2/README.md) | Application primitives — embeddings, RAG, prompt caching, LLM-as-judge | ✅ shipped |
 | [Phase 3](phase-3/README.md) | Build agents from scratch — the loop, tools, research agent | ✅ shipped |
-| [Phase 4](phase-4/README.md) | Frameworks and patterns — Claude Agent SDK, the 5 BEA patterns, LangGraph | 🚧 in progress (3/9) |
+| [Phase 4](phase-4/README.md) | Frameworks and patterns — Claude Agent SDK, the 5 BEA patterns, LangGraph | 🚧 in progress (4/9) |
 | Phase 5 | Production-grade agents | — |
 | Phase 6 | Frontiers (computer use, browser agents, voice, fine-tuning) | — |
 
@@ -80,5 +80,6 @@ learn-ai/
     ├── 01_sdk_hello.py   #    Claude Agent SDK hello-world (no while loop, async, cost computed for you)
     ├── 02_research_agent_sdk.py  # ship: Phase 3 research agent ported to the SDK (same 3 tools)
     ├── 03_sdk_vs_scratch.md      # the comparison: LOC, deps, behavior — what the framework adds & hides
+    ├── 04_prompt_chaining.py     # BEA pattern #1: draft → gate → translate (a workflow, plain anthropic)
     └── reports/          #    generated reports (checked in as samples)
 ```

@@ -1068,3 +1068,19 @@ After Exercise 02, the question came up: why did wrapping three *local* Python f
 **Did we need it? Honestly no** — for three local functions Phase 3's inline approach is simpler. We used MCP only because the SDK imposes it as its universal tool door (built-in tools, our tools, and external servers all enter the same way). The real payoff — consuming *someone else's* tools (a GitHub/Slack MCP server with zero integration code) — is a **Phase 5** topic. In Phase 4 we only used the "wrap my own functions" corner of MCP: the shape, not yet the payoff.
 
 (Recorded in `phase-4/README.md` → "Deep dive: what is MCP" and in `GLOSSARY.md`.)
+
+## Exercise 04 — prompt chaining (BEA pattern #1, first workflow)
+
+Picked up Phase 4 already 3/9 shipped (SDK hello → research-agent port → comparison). Chose to go straight to Exercise 04 rather than re-ground on 01–03.
+
+**What it is:** the first *workflow* of the phase — a fixed sequence of LLM calls wired in plain Python (`anthropic`, not the Agent SDK, on purpose: a framework would hide the orchestration). Chain: `topic → ① draft blurb (LLM) → ② GATE (pure Python) → ③ translate (LLM)`.
+
+**The one idea — the gate.** Calling the model twice isn't prompt chaining; the *check between the calls* is. The gate here is `len(text.split())` + a hype-word set — no LLM. Lesson: not every step needs a model.
+
+**Two runs:**
+- `"…changelog"` (defaults): ① 31-word blurb → ② gate passes → ③ French translation. 2 LLM calls + 1 gate, **$0.0006**.
+- `"a note-taking app" --max-words 10`: ① 43-word blurb → ② gate **fails** (`too long`) → chain **stops**, step ③ never runs → **$0.0003** (half the bill). The cost gap *is* the lesson: a free gate protects the expensive downstream step.
+
+**Deliberate non-overlap:** the gate only *stops*. Looping its feedback back into step ① to *improve* the draft is generate→critique→retry — evaluator-optimizer, Exercise 08. Two different patterns kept separate.
+
+Docs updated same turn (phase-4 progress 3/9→4/9, run order, "What Ex 04 adds" section, concepts 36–38; root README status + tree; GLOSSARY prompt-chaining/gate; AGENTS run cmds). Next: Exercise 05 — routing.
