@@ -1150,3 +1150,7 @@ Nothing shared — each fits its topic. You own the *shape*; the model owns the 
 **"Still a workflow, or an agent?"** Still a workflow — control flow fixed by us (plan once → work once → synth once, no loop). Model picks step *content*, not *structure*. Let the orchestrator loop on "is it done?" → model owns control flow → agent (Phase 3 while-loop). This stops one step short; Ex 08 adds the loop back.
 
 Docs updated same turn (phase-4 progress 6/9→7/9, run order, "What Ex 07 adds", concepts 45–47; root README status + tree; GLOSSARY orchestrator-workers/dynamic-decomposition/boundary; AGENTS). Next: Exercise 08 — evaluator-optimizer (the loop returns).
+
+### Ex 07 follow-up Q&A — "workflow ≠ deterministic; it's fixed control flow"
+
+User summarized orchestrator-workers correctly (code owns the *shape* plan→workers→synthesize; LLM owns the plan *contents*; no loop → workflow; becomes agent once the model decides to retry/re-plan based on results). One correction: **don't call a workflow "deterministic."** Its *output* is non-deterministic (LLM steps sample at temp ~1.0 — two runs give different plans). What's fixed is the **control flow** (the path + exit), written by us. Workflow vs agent = *who owns the control flow* (your code vs the model), NOT *is the output repeatable*. BEA's words: workflows = "predefined code paths"; agents = "dynamically direct their own processes." Right phrasing: "no loop → control flow fixed by us → workflow," not "→ deterministic." Captured in phase-4/README → Ex 07 "Precision check".

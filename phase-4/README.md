@@ -353,6 +353,14 @@ orchestrator *loop* — "look at the draft, decide if it needs more workers, rep
 owns the control flow and you've crossed into an **agent** (Phase 3's while-loop). This exercise stops one step
 short of that line on purpose; Exercise 08 (evaluator-optimizer) adds the loop back.
 
+> **Precision check: a workflow is not "deterministic" — its *control flow* is fixed, not its output.** Run `07`
+> twice on the same topic and the plan can differ (different subtopics, different wording) because every LLM call
+> samples at temp ~1.0. A workflow and an agent *both* produce non-deterministic output; that's not what separates
+> them. What's fixed in a workflow is the **path** — the sequence of steps and the exit condition, written by you.
+> BEA's own words: workflows use "**predefined code paths**," agents "**dynamically direct their own processes**."
+> The criterion is *who owns the control flow — your code or the model* — never *is the output repeatable*. So the
+> right phrasing is "no loop, hence the control flow is fixed by us, hence a workflow" — not "hence deterministic."
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
