@@ -4,11 +4,12 @@
 
 **Ship deliverable (from the roadmap):** rebuild the **exact** Phase 3 research agent on the **Claude Agent SDK**, then compare lines of code, robustness, and behavior against the hand-rolled version.
 
-> **Status: 🚧 in progress (7/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
+> **Status: 🚧 in progress (8/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
 > patterns) are built in **plain Anthropic API** on purpose — they're workflows, and a framework would hide
-> the orchestration they're meant to teach. Exercise 09 adds **LangGraph** for a true 3-way comparison.
+> the orchestration they're meant to teach. **All five BEA patterns are now shipped.** Exercise 09 adds
+> **LangGraph** for a true 3-way comparison.
 
-## Progress — 7 of 9
+## Progress — 8 of 9
 
 | # | Deliverable | Status |
 |---|---|---|
@@ -19,8 +20,8 @@
 | 05 | [`05_routing.py`](05_routing.py) — a classifier **branches** input to a specialized handler (cost/quality routing) | ✅ shipped |
 | 06 | [`06_parallelization.py`](06_parallelization.py) — fan-out concurrent calls, then **vote** or **section**-aggregate (async) | ✅ shipped |
 | 07 | [`07_orchestrator_workers.py`](07_orchestrator_workers.py) — a model **dynamically plans** subtasks, workers run them in parallel, a synthesizer combines | ✅ shipped |
-| 08 | `08_evaluator_optimizer.py` — generate → critique → refine (the Phase 3 self-critique, framed as a pattern) | ⏳ next |
-| 09 | `09_langgraph_research_agent.py` — breadth: the same agent on **LangGraph**, to feel graph-based control vs the SDK | ⏳ pending |
+| 08 | [`08_evaluator_optimizer.py`](08_evaluator_optimizer.py) — generate → evaluate → refine until accepted (the Phase 3 self-critique, framed as pattern #5) | ✅ shipped |
+| 09 | `09_langgraph_research_agent.py` — breadth: the same agent on **LangGraph**, to feel graph-based control vs the SDK | ⏳ next |
 
 ## The one idea behind this phase
 
@@ -66,6 +67,11 @@ uv run phase-4/06_parallelization.py "a password manager for families" --mode se
 uv run phase-4/07_orchestrator_workers.py "the impact of remote work on companies"
 uv run phase-4/07_orchestrator_workers.py "how the James Webb Space Telescope sees the early universe"   # note: a DIFFERENT plan
 uv run phase-4/07_orchestrator_workers.py "a topic" --synth-model claude-sonnet-4-6   # stronger editor at the join
+
+# Exercise 08 ✅ — evaluator-optimizer (BEA pattern #5): generate → evaluate → refine until accepted. The loop returns.
+uv run phase-4/08_evaluator_optimizer.py "Explain what a database index is to a non-technical manager, under 80 words."
+uv run phase-4/08_evaluator_optimizer.py "Explain what a database index is..." --evaluator-model claude-sonnet-4-6  # asymmetric critic → real iteration
+uv run phase-4/08_evaluator_optimizer.py "Write a 4-line poem about gradient descent" --show-drafts   # watch every revision
 ```
 
 ## What Exercise 01 adds: the SDK hello-world
@@ -361,6 +367,62 @@ short of that line on purpose; Exercise 08 (evaluator-optimizer) adds the loop b
 > The criterion is *who owns the control flow — your code or the model* — never *is the output repeatable*. So the
 > right phrasing is "no loop, hence the control flow is fixed by us, hence a workflow" — not "hence deterministic."
 
+## What Exercise 08 adds: evaluator-optimizer (BEA pattern #5 — the loop returns)
+
+Two fixed roles in a loop: a **generator** (optimizer) writes a draft, an **evaluator** grades it against
+criteria and returns *specific issues*, and if it falls short the generator revises *with that feedback* —
+repeat until the evaluator accepts or you hit a round cap.
+
+```
+GENERATOR writes draft ─▶ EVALUATOR grades + lists issues ─▶ accept? ─ yes ─▶ done
+     ▲                                                          │ no
+     └───────────────── revise with the issues ◀───────────────┘
+```
+
+**Two things this ties together:**
+- It's **Phase 3's self-critique (Reflexion)**, now named as a BEA pattern. Generator + evaluator are two "agents"
+  passing work back and forth — the seed of multi-agent, with no framework: two prompts and a `while`.
+- It's **Ex 04's gate, evolved.** There the gate was pure Python and just *stopped* the chain. Here the gate is an
+  *LLM* (because "is this clear and jargon-free?" needs judgment, not `len()`), and instead of stopping it feeds
+  issues back so the next draft fixes them. Evaluator-optimizer = a gate that grades and loops.
+
+**Measured — the evaluator sets the ceiling (the key result):** same Haiku generator, same task, only the *grader*
+changed:
+
+| Evaluator | Rounds | Trace | Cost |
+|---|---|---|---|
+| Haiku | 1 | 9/10 → accept immediately (draft was a valid 76 words) — **loop never iterated** | $0.0015 |
+| **Sonnet** (asymmetric critic) | 2 | 7/10 ↻ *"~95 words, over the limit; heading is clutter"* → revise → 9/10 ✓ | $0.0110 |
+
+A lenient evaluator rubber-stamps round 1 and you learn nothing; a **stronger evaluator** (Phase 3's
+asymmetric-critic trick) reliably forces real iteration — the score climbed **7 → 9** across a genuine revision.
+That quality came at ~**7× the cost** (every round is generate + evaluate). And the grader is **fallible**: even
+accepting, Sonnet hedged ("verify exact count"), and the two runs produced different round-1 drafts. An LLM
+evaluator is a strong signal, not ground truth.
+
+### Still a workflow — even though it loops (the subtlest case)
+
+This is the closest the phase gets to the agent line, because **an LLM's verdict now gates the loop**. It's still a
+workflow: *you* fixed the two roles, the generate→evaluate cycle, and the exit (`verdict == "accept"` OR
+`round == max`). The evaluator fills a fixed slot ("grade this against these criteria"); your `if` reads the
+verdict and decides whether to loop. An **agent** has an *open action space* — the model picks which tool, when,
+and whether to continue, with no predefined cycle. Here the cycle is predefined; the model supplies a graded
+signal, not the control flow.
+
+## The five BEA patterns — all shipped (the phase's middle block, done)
+
+| # | Pattern | Shape | Sequential? | The one-line "why" |
+|---|---|---|---|---|
+| 04 | Prompt chaining | step → gate → step | yes | Decompose for accuracy; gate catches a bad step early. |
+| 05 | Routing | classify → one handler | branch | Spend cheap/expensive per input; refuse out-of-scope for $0. |
+| 06 | Parallelization | fan-out → aggregate | no (concurrent) | Cut latency (independent calls); vote for reliability (when they disagree). |
+| 07 | Orchestrator-workers | plan → workers → synthesize | no (workers concurrent) | Model *plans* the subtasks at runtime (dynamic decomposition). |
+| 08 | Evaluator-optimizer | generate → evaluate → refine | loop | Iterate toward a bar when you have clear criteria; evaluator sets the ceiling. |
+
+**The through-line:** all five are *workflows* — **you** own the control flow, in plain Python, no framework. The
+model fills fixed slots; your code decides the path. That's the whole point of Anthropic's *Building Effective
+Agents*: reach for these before you reach for an agent, because most "agents" should have been one of these.
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
@@ -388,6 +450,9 @@ short of that line on purpose; Exercise 08 (evaluator-optimizer) adds the loop b
 | 45 | **Orchestrator-workers** (BEA pattern #4) | A model *plans* subtasks, workers do them (in parallel), a synthesizer combines. Builds on parallelization — but a model call produces the list being fanned out. |
 | 46 | **Dynamic decomposition** | The defining trait of orchestrator-workers: the subtasks are decided by the model at runtime (different per input), not fixed in your code like Ex 06's sections. You own the *shape*; the model owns the *content*. |
 | 47 | **Workflow↔agent boundary** | Orchestrator-workers is the closest workflow to an agent. It stays a workflow because the control flow (plan→work→synthesize, once) is fixed by you. Let the orchestrator *loop* on "is it done?" and the model owns control flow → agent. |
+| 48 | **Evaluator-optimizer** (BEA pattern #5) | Two fixed roles in a loop: a *generator* drafts, an *evaluator* grades + lists issues, the generator revises with that feedback until accepted (or a round cap). Phase 3's self-critique, named as a pattern. |
+| 49 | **Asymmetric critic** | Using a *stronger* model as the evaluator than the generator (Haiku writes, Sonnet grades). A weak evaluator rubber-stamps round 1 and the loop is a no-op; the stronger grader forces real iteration — the evaluator sets the ceiling. |
+| 50 | **A loop is not an agent** | Evaluator-optimizer loops yet stays a workflow: *you* fixed the cycle and exit (`accept` or max rounds); the evaluator fills a slot, your `if` owns the branch. An agent has an *open action space* — the model picks the next action, not just fills a graded slot. |
 
 ## Gotchas
 

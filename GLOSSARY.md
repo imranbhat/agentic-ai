@@ -111,6 +111,9 @@ A "look it up fast" reference. Phase READMEs explain the same things with more d
 | **Orchestrator-workers** | BEA pattern #4: a central *orchestrator* model plans subtasks, *worker* calls do them (usually in parallel), a *synthesizer* combines the results. Builds on parallelization, but a model call produces the list being fanned out. (Phase 4, Ex 07.) |
 | **Dynamic decomposition** | The defining trait of orchestrator-workers: the subtasks are chosen by the model at runtime and differ per input — unlike *sectioning*, where you hardcode the same subtasks every run. You own the *shape* (plan→work→synthesize); the model owns the *content* (which subtasks). |
 | **Workflow↔agent boundary** | The line orchestrator-workers sits right against. It stays a *workflow* because *you* fixed the control flow (one plan, one worker batch, one synthesis). Let the orchestrator *loop* on "is it done yet?" and the *model* owns control flow → it's now an *agent* (Phase 3's while-loop). |
+| **Evaluator-optimizer** | BEA pattern #5: two fixed roles in a loop — a *generator* drafts, an *evaluator* grades it and lists issues, the generator revises with that feedback until accepted or a round cap. It's Phase 3's self-critique (Reflexion), named as a pattern. (Phase 4, Ex 08.) |
+| **Asymmetric critic** | Using a *stronger* model as the evaluator than as the generator (e.g. Haiku writes, Sonnet grades). A lenient/weak evaluator rubber-stamps round 1 and the loop teaches nothing; the stronger grader forces real iteration. The evaluator sets the quality ceiling. |
+| **A loop ≠ an agent** | Evaluator-optimizer *loops* but is still a *workflow*: you fixed the cycle and the exit (`accept` or max rounds), and your `if` owns the branch — the evaluator just fills a graded slot. An *agent* has an open action space (the model chooses the next action), not a predefined cycle. |
 
 ## Models and providers
 

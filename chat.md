@@ -1154,3 +1154,23 @@ Docs updated same turn (phase-4 progress 6/9→7/9, run order, "What Ex 07 adds"
 ### Ex 07 follow-up Q&A — "workflow ≠ deterministic; it's fixed control flow"
 
 User summarized orchestrator-workers correctly (code owns the *shape* plan→workers→synthesize; LLM owns the plan *contents*; no loop → workflow; becomes agent once the model decides to retry/re-plan based on results). One correction: **don't call a workflow "deterministic."** Its *output* is non-deterministic (LLM steps sample at temp ~1.0 — two runs give different plans). What's fixed is the **control flow** (the path + exit), written by us. Workflow vs agent = *who owns the control flow* (your code vs the model), NOT *is the output repeatable*. BEA's words: workflows = "predefined code paths"; agents = "dynamically direct their own processes." Right phrasing: "no loop → control flow fixed by us → workflow," not "→ deterministic." Captured in phase-4/README → Ex 07 "Precision check".
+
+## Exercise 08 — evaluator-optimizer (BEA pattern #5, the loop returns) — all 5 patterns done
+
+**What it is:** two fixed roles in a loop — a **generator** drafts, an **evaluator** (forced tool use → {score, issues, verdict}) grades and lists issues, the generator revises with that feedback until accept or round cap.
+
+**Ties together:** Phase 3's self-critique (Reflexion), now named as pattern #5; AND Ex 04's gate evolved — the gate is now an LLM (judgment, not `len()`) that loops back with feedback instead of just stopping.
+
+**Measured — the evaluator sets the ceiling:** same Haiku generator + task, only the grader changed:
+| Evaluator | Rounds | Trace | Cost |
+|---|---|---|---|
+| Haiku | 1 | 9/10 accept immediately (valid 76 words) — loop never iterated | $0.0015 |
+| Sonnet (asymmetric critic) | 2 | 7/10 "~95 words, over limit; heading clutter" → revise → 9/10 accept | $0.0110 |
+
+Lenient evaluator rubber-stamps round 1 (no-op); stronger evaluator forces real iteration (score 7→9). Cost ~7×. And the grader is fallible/non-deterministic (Sonnet hedged even when accepting; different round-1 drafts across runs). LLM evaluator = strong signal, not ground truth.
+
+**Still a workflow though it loops:** we fixed the roles, the cycle, and the exit (`accept` or max rounds); evaluator fills a slot, our `if` owns the branch. Agent = open action space (model picks next action); here the cycle is predefined.
+
+**The 5 BEA patterns are all shipped** (chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) — all workflows, plain Python, no framework. Through-line: YOU own the control flow; the model fills fixed slots.
+
+Docs updated same turn (phase-4 progress 7/9→8/9, run order, "What Ex 08 adds" + "The five BEA patterns — all shipped" capstone table, concepts 48–50; root README status + tree; GLOSSARY evaluator-optimizer/asymmetric-critic/loop≠agent; AGENTS). Next & final: Exercise 09 — the same research agent on LangGraph (3-way comparison).
