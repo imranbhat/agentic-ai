@@ -1,33 +1,28 @@
 # The ReAct Prompting Pattern
 
-## What Is ReAct?
+## What is ReAct?
 
-ReAct is a prompting pattern that interleaves reasoning and action—allowing language models to think about what to do, take an action (typically a tool call), observe the result, and then reason again in a cyclical loop [1]. Rather than planning an entire sequence upfront and executing it blindly, the model reasons one step ahead, acts, looks at what came back, and adjusts accordingly. This loop repeats until the task is complete [1].
+ReAct (Reasoning + Acting) is a prompting framework that enables large language models to generate both reasoning traces and task-specific actions in an interleaved manner [1]. Unlike traditional chain-of-thought prompting, which focuses solely on reasoning, ReAct combines internal reasoning with external action, allowing LLMs to interact with external tools and environments to retrieve additional information during problem-solving [1].
 
-The core cycle consists of three repeating steps [1]:
+The framework works through a cyclical pattern of three steps: **Thought** (reasoning about the situation), **Action** (deciding what to do), and **Observation** (processing results from the environment). This process repeats until a solution is reached, mirroring human decision-making more closely than linear prompting approaches [2].
 
-- **Thought**: The model reasons about the current state and decides what to do next.
-- **Action**: The model calls a tool (search, read a file, run a query, hit an API).
-- **Observation**: The tool returns a result, which becomes part of the next thought.
+## Who Introduced ReAct?
 
-## Who Introduced It and When
+ReAct was introduced by **Yao et al. in 2022** [1]. The full list of authors is: Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik R. Narasimhan, and Yuan Cao. The framework was published in a paper titled "ReAct: Synergizing Reasoning and Acting in Language Models" presented at the Eleventh International Conference on Learning Representations in 2022 [2].
 
-ReAct was introduced by **Yao et al. at Google Brain in 2022** in the paper *"ReAct: Synergizing Reasoning and Acting in Language Models."* [2][1]. The authors were Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik R Narasimhan, and Yuan Cao, and the work was published in the Eleventh International Conference on Learning Representations in 2022 [3].
+## Key Advantages
 
-## Why ReAct Works Better Than Alternatives
+ReAct offers several significant improvements over earlier prompting techniques:
 
-The research showed that interleaving reasoning with action dramatically reduces hallucination rates on knowledge-intensive tasks compared to pure chain-of-thought reasoning or pure action without reasoning [2]. ReAct is superior in uncertain environments because it enables course-correction mid-task: if a search returns nothing useful or a tool call fails, the next reasoning step observes the failure and adjusts rather than continuing blindly down a wrong path [1].
+- **Reduced Hallucination**: By grounding responses in external data sources rather than relying solely on the model's internal knowledge [1]
+- **Better Reasoning**: Generates reasoning traces that allow the model to induce, track, and update action plans and handle exceptions [1]
+- **Improved Reliability**: Outperforms chain-of-thought prompting on language and decision-making tasks by combining both internal knowledge and external information [1]
+- **Enhanced Interpretability**: Leads to improved human interpretability and trustworthiness of LLMs compared to black-box reasoning approaches [1]
 
-ReAct shines for multi-hop questions, web search tasks, document retrieval, code execution, and API calls against real systems—where partial results inform the next step. It is less beneficial for tasks with no external state or verification points, such as essay writing [1].
-
-## Impact and Modern Adoption
-
-Since its introduction, ReAct has become the baseline pattern for agentic systems [1]. By 2026, most coding agents—including Claude Code, Cursor, and Aider—run a ReAct-style loop internally [1]. Modern agent frameworks like LangChain, LangGraph, and native tool-use APIs from Anthropic and OpenAI have made implementing ReAct loops accessible to developers [2].
+The research showed that the best approach combines ReAct with chain-of-thought prompting to leverage both internal knowledge and external information obtained during reasoning [1].
 
 ## Sources
 
-[1] https://sureprompts.com/blog/react-prompting-guide
+[1] https://www.promptingguide.ai/techniques/react
 
-[2] https://nesyona.com/articles/agentic-prompting
-
-[3] https://sebgnotes.com/blog/2025-01-01-react-prompting/
+[2] https://sebgnotes.com/blog/2025-01-01-react-prompting/

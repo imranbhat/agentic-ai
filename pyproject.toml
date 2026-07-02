@@ -18,6 +18,8 @@ dependencies = [
     "ddgs>=9.14.4",
     "beautifulsoup4>=4.15.0",
     "claude-agent-sdk>=0.2.110",
+    "langgraph>=1.2.7",
+    "langchain-anthropic>=1.4.8",
 ]
 
 [dependency-groups]
