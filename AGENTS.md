@@ -43,7 +43,10 @@ uv run phase-4/07_orchestrator_workers.py "a briefing topic"            # BEA pa
 uv run phase-4/07_orchestrator_workers.py "a topic" --synth-model claude-sonnet-4-6   # stronger editor at the join
 uv run phase-4/08_evaluator_optimizer.py "a task with clear criteria"   # BEA pattern #5: generate → evaluate → refine
 uv run phase-4/08_evaluator_optimizer.py "a task" --evaluator-model claude-sonnet-4-6  # asymmetric critic → real iteration
+uv run phase-4/09_langgraph_research_agent.py "your question"           # research agent on LangGraph (explicit graph) → cited report
 ```
+
+`phase-4/09_langgraph_research_agent.py` adds the deps `langgraph` (1.x) + `langchain-anthropic` — the one deliberately non-Anthropic-first framework (provider-agnostic; runs Claude via `ChatAnthropic`), added for breadth. It rebuilds the Phase 3 / Ex 02 research agent a third way as an explicit `StateGraph` (nodes + edges). Note LangGraph 1.x API drift: `BaseMessage.text` is a property (not a method); imports are `from langgraph.graph import StateGraph, START, END, MessagesState` and `from langgraph.prebuilt import ToolNode, tools_condition`. Verify fast-moving framework APIs against live docs (Context7), not memory.
 
 `phase-4/02_research_agent_sdk.py` is a faithful port of `phase-3/05_research_agent.py`: identical three tools, now registered as one in-process MCP server (`@tool` + `create_sdk_mcp_server`). Writes to `phase-4/reports/`, **which is tracked** (sample output, like `phase-3/reports/`). Faithful-port options: `tools=[]` (no built-in tools), `setting_sources=[]` (isolation — no `CLAUDE.md`), `system_prompt=<string>` (replaces the preset), `max_turns=15` (built-in loop guard), `permission_mode="bypassPermissions"`. Inspect SDK objects with `uv run python -c ...`, never bare `python3` (system interpreter can't see the venv).
 

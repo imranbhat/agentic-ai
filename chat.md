@@ -1174,3 +1174,28 @@ Lenient evaluator rubber-stamps round 1 (no-op); stronger evaluator forces real 
 **The 5 BEA patterns are all shipped** (chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer) — all workflows, plain Python, no framework. Through-line: YOU own the control flow; the model fills fixed slots.
 
 Docs updated same turn (phase-4 progress 7/9→8/9, run order, "What Ex 08 adds" + "The five BEA patterns — all shipped" capstone table, concepts 48–50; root README status + tree; GLOSSARY evaluator-optimizer/asymmetric-critic/loop≠agent; AGENTS). Next & final: Exercise 09 — the same research agent on LangGraph (3-way comparison).
+
+## Exercise 09 — the research agent, a THIRD way: LangGraph (phase finale, 9/9)
+
+**What it is:** the exact Phase 3 / Ex 02 research agent, rebuilt a third time on **LangGraph** — but as an *explicit* `StateGraph` (nodes + edges), NOT the `create_react_agent` prebuilt (which would hide the graph, like the SDK hides the loop). Same 3 tools (web_search/fetch_url/write_file), same question.
+
+**The graph = Phase 3's loop as data:** agent node (ChatAnthropic + bind_tools) → `tools_condition` conditional edge → tools node (ToolNode) → back edge to agent → END. `recursion_limit` = Phase 3's max-iterations.
+
+**The 3-way comparison (same question "What is ReAct?"):**
+| | Phase 3 hand-rolled | Ex 02 SDK | Ex 09 LangGraph |
+|---|---|---|---|
+| The loop | `while` you wrote | hidden in `query()` | explicit graph you declare |
+| Control flow | invisible | opaque | first-class (inspect/checkpoint/resume) |
+| Guard | `range(max)` | `max_turns` | `recursion_limit` |
+| Cost tally | manual | `ResultMessage.total_cost_usd` | `usage_metadata` |
+| Provider | Claude | Claude | provider-agnostic (Claude via langchain-anthropic) |
+| Cost | ~$0.0184 | ~$0.0194 | ~$0.0132 |
+| You still write | the 3 tools | the 3 tools | the 3 tools |
+
+**Verdict:** same trajectory, same ~1–2¢, same tools all three times. Framework changed how you *express/control the loop*, not the agent. LangGraph's niche = control flow as data → durability, streaming state, human-in-the-loop. Tool design is the durable skill; the loop was disposable.
+
+**Anthropic-first exception (flagged):** LangGraph is the one non-Anthropic-first framework, added for breadth per roadmap; runs Claude via ChatAnthropic. New deps langgraph 1.2.7 + langchain-anthropic (~18 pkgs).
+
+**Gotcha:** LangGraph on 1.x — API moved (`msg.text` is now a property not method; new import paths). Verified against Context7 live docs, not memory.
+
+**PHASE 4 COMPLETE (9/9).** SDK block (01–03) + 5 BEA patterns (04–08) + LangGraph 3-way (09). Docs all current (phase-4 README ✅ complete, "What Ex 09 adds" 3-way table + deps justification + "phase in one line", concepts 51–54, LangGraph gotcha; root README Phase 4 → ✅ shipped + tree; GLOSSARY LangGraph/nodes-edges/bind_tools/langchain-anthropic; AGENTS). Next up: Phase 5 — production-grade agents.

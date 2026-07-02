@@ -4,12 +4,12 @@
 
 **Ship deliverable (from the roadmap):** rebuild the **exact** Phase 3 research agent on the **Claude Agent SDK**, then compare lines of code, robustness, and behavior against the hand-rolled version.
 
-> **Status: 🚧 in progress (8/9).** Sequence confirmed. Exercises 04–08 (the *Building Effective Agents*
-> patterns) are built in **plain Anthropic API** on purpose — they're workflows, and a framework would hide
-> the orchestration they're meant to teach. **All five BEA patterns are now shipped.** Exercise 09 adds
-> **LangGraph** for a true 3-way comparison.
+> **Status: ✅ complete (9/9).** Exercises 04–08 (the *Building Effective Agents* patterns) are built in
+> **plain Anthropic API** on purpose — they're workflows, and a framework would hide the orchestration they're
+> meant to teach. Exercise 09 rebuilds the research agent a **third** way (LangGraph) for a true 3-way comparison:
+> hand-rolled loop → Claude Agent SDK → explicit graph.
 
-## Progress — 8 of 9
+## Progress — 9 of 9 (✅ complete)
 
 | # | Deliverable | Status |
 |---|---|---|
@@ -21,7 +21,7 @@
 | 06 | [`06_parallelization.py`](06_parallelization.py) — fan-out concurrent calls, then **vote** or **section**-aggregate (async) | ✅ shipped |
 | 07 | [`07_orchestrator_workers.py`](07_orchestrator_workers.py) — a model **dynamically plans** subtasks, workers run them in parallel, a synthesizer combines | ✅ shipped |
 | 08 | [`08_evaluator_optimizer.py`](08_evaluator_optimizer.py) — generate → evaluate → refine until accepted (the Phase 3 self-critique, framed as pattern #5) | ✅ shipped |
-| 09 | `09_langgraph_research_agent.py` — breadth: the same agent on **LangGraph**, to feel graph-based control vs the SDK | ⏳ next |
+| 09 | [`09_langgraph_research_agent.py`](09_langgraph_research_agent.py) — breadth: the same agent on **LangGraph** (explicit node/edge graph), the 3-way comparison | ✅ shipped |
 
 ## The one idea behind this phase
 
@@ -72,6 +72,11 @@ uv run phase-4/07_orchestrator_workers.py "a topic" --synth-model claude-sonnet-
 uv run phase-4/08_evaluator_optimizer.py "Explain what a database index is to a non-technical manager, under 80 words."
 uv run phase-4/08_evaluator_optimizer.py "Explain what a database index is..." --evaluator-model claude-sonnet-4-6  # asymmetric critic → real iteration
 uv run phase-4/08_evaluator_optimizer.py "Write a 4-line poem about gradient descent" --show-drafts   # watch every revision
+
+# Exercise 09 ✅ — the research agent, a THIRD way: LangGraph (explicit node/edge graph). Same 3 tools, same question.
+uv run phase-4/09_langgraph_research_agent.py "What is the ReAct prompting pattern and who introduced it?"
+uv run phase-4/09_langgraph_research_agent.py "Compare RAG vs fine-tuning for keeping an LLM current" --model claude-sonnet-4-6
+# reports are written to phase-4/reports/ (checked in as sample output)
 ```
 
 ## What Exercise 01 adds: the SDK hello-world
@@ -423,6 +428,61 @@ signal, not the control flow.
 model fills fixed slots; your code decides the path. That's the whole point of Anthropic's *Building Effective
 Agents*: reach for these before you reach for an agent, because most "agents" should have been one of these.
 
+## What Exercise 09 adds: the research agent, a THIRD way — LangGraph (the phase finale)
+
+You have now built the *exact same* research agent three times. That repetition is the point: with the tools and
+the question held constant, the only variable is **how the loop is expressed** — so the differences you see are
+purely "what the framework does."
+
+```
+        START ─▶ (agent) ──tools_condition──▶ (tools) ─┐
+                    ▲            │                       │
+                    │           └── no tool calls ─▶ END │
+                    └───────────────────────────────────┘
+```
+
+The graph *is* Phase 3's loop, drawn as data: an **agent node** (one `ChatAnthropic` call, tools bound), a
+**tools node** (`ToolNode` runs whatever the agent asked for), a **conditional edge** (`tools_condition` = Phase
+3's `if stop_reason == "tool_use"`), and a **back edge** tools→agent. We built it *explicitly* rather than with
+LangGraph's `create_react_agent` prebuilt — because the prebuilt would hide the graph, exactly like the SDK hides
+the loop, defeating the lesson.
+
+### The 3-way comparison (same tools, same question — "What is ReAct?")
+
+| | Phase 3 — hand-rolled | Ex 02 — Claude Agent SDK | Ex 09 — LangGraph |
+|---|---|---|---|
+| **The loop** | a `while`/`for` *you* wrote | *hidden* inside `query()` | an **explicit graph** you declare |
+| **Control flow** | invisible (in your head) | opaque (framework owns it) | a **first-class object** — inspect/checkpoint/stream/resume |
+| Tool wiring | raw dicts + dispatch table | `@tool` + in-process MCP server | `@tool` + `bind_tools` + `ToolNode` |
+| Max-iteration guard | `range(max)` | `max_turns` | `recursion_limit` |
+| Cost tally | manual `PRICES` math | `ResultMessage.total_cost_usd` | `usage_metadata` per message |
+| Provider | Claude only | Claude only (Claude Code) | **provider-agnostic** (Claude via `langchain-anthropic`) |
+| Same-question cost | ~$0.0184 | ~$0.0194 | ~$0.0132 |
+| **What you still write** | the 3 tools | the 3 tools | the 3 tools |
+
+**The verdict (completing Ex 03's question):** all three ran the same trajectory (search → fetch → write →
+summary) at the same ~1–2¢ ballpark. The framework never changed the *agent* — it changed how *you express and
+control the loop*. LangGraph's distinct value is the middle row: it makes control flow **data**, which is what
+enables durability (checkpoint/resume), streaming state, and human-in-the-loop — the reasons the roadmap slots it
+for "multi-step workflows, human-in-the-loop." You pay for that in ~18 extra packages and LangChain's abstractions
+(message types, `bind_tools`), a heavier stack than the SDK for this simple a job. Hand-roll to learn or tightly
+control; SDK for Claude-native production; LangGraph when you need the graph itself to be explicit and durable.
+
+### Anthropic-first exception + new dependencies (flagged per our rule)
+
+This is the **one place in the repo we lead with a non-Anthropic framework**, on purpose — the roadmap says "learn
+another for breadth." **LangGraph is provider-agnostic**; we still run *Claude* underneath via
+`langchain-anthropic`'s `ChatAnthropic`. New deps: `langgraph` (1.2.7) + `langchain-anthropic` pulled **~18
+packages** (`langchain-core`, `langgraph-checkpoint`/`-prebuilt`, `langsmith`, `orjson`, …) — comparable in weight
+to the Agent SDK's install, and the same trade: convenience/among-frameworks-portability for dependency mass.
+
+## The phase in one line
+
+Phase 3 proved *an agent is a loop you can write by hand.* Phase 4 answered *what a framework buys you*: for
+**agent loops**, it runs/streams/guards the loop (SDK, LangGraph) — saving code, not cost or quality; for
+**workflows** (the 5 BEA patterns), you mostly don't need a framework at all — they're `if`/`for`/function calls
+you own. The durable skill across all of it is **tool design**; the loop was the disposable part.
+
 ## Concepts (the new Phase 4 vocabulary, continuing from Phase 3's 24)
 
 | # | Concept | One-line |
@@ -453,6 +513,10 @@ Agents*: reach for these before you reach for an agent, because most "agents" sh
 | 48 | **Evaluator-optimizer** (BEA pattern #5) | Two fixed roles in a loop: a *generator* drafts, an *evaluator* grades + lists issues, the generator revises with that feedback until accepted (or a round cap). Phase 3's self-critique, named as a pattern. |
 | 49 | **Asymmetric critic** | Using a *stronger* model as the evaluator than the generator (Haiku writes, Sonnet grades). A weak evaluator rubber-stamps round 1 and the loop is a no-op; the stronger grader forces real iteration — the evaluator sets the ceiling. |
 | 50 | **A loop is not an agent** | Evaluator-optimizer loops yet stays a workflow: *you* fixed the cycle and exit (`accept` or max rounds); the evaluator fills a slot, your `if` owns the branch. An agent has an *open action space* — the model picks the next action, not just fills a graded slot. |
+| 51 | **LangGraph** | A provider-agnostic agent framework that models control flow as an explicit **graph**: `StateGraph` of nodes + edges you declare, compile, and run. Its pitch vs the SDK: the loop is inspectable, checkpointable, resumable — not hidden. |
+| 52 | **Node / edge / conditional edge** | LangGraph's primitives. A *node* is a step (a function — e.g. an LLM call or `ToolNode`); an *edge* is a fixed transition; a *conditional edge* (`tools_condition`) branches on state. The Phase 3 loop, expressed as these. |
+| 53 | **State + `add_messages`** | LangGraph threads a typed *state* through the graph. `MessagesState`'s `messages` uses the `add_messages` reducer, which **appends** each node's output — the framework's version of Phase 3's `messages.append(...)`. |
+| 54 | **`bind_tools` / `ToolNode` / `recursion_limit`** | LangChain/LangGraph tool wiring: `ChatAnthropic.bind_tools([...])` advertises tools to the model; `ToolNode` executes the requested calls; `recursion_limit` caps graph steps (Phase 3's max-iterations). |
 
 ## Gotchas
 
@@ -466,3 +530,4 @@ Agents*: reach for these before you reach for an agent, because most "agents" sh
 - **Routing has a classifier tax (Ex 05).** The classifier costs a flat ~$0.0009 on *every* request — and on the `simple` route that's **9× the handler it routed to** ($0.0009 vs $0.0001). Routing only nets out ahead when the cost spread between handlers is big enough to dwarf that tax (the Sonnet route, ~$0.0088, is what justifies it). For a uniformly-cheap workload, always-Haiku beats routing. Don't add a router unless the routes genuinely differ in cost or quality.
 - **Parallel wall-clock is noisy (Ex 06).** Two identical 5-call parallel runs clocked 1.15s and 4.86s — network/load jitter, not your code. Parallel time ≈ the *slowest* call in the batch, and the slowest call varies run to run. Compare parallel-vs-sequential *within the same conditions* (the 1.15s vs 4.35s pair), not across separate runs.
 - **Voting needs variance to be worth it (Ex 06).** Our borderline reviews came back unanimous (negative×5, positive×7) — a capable model at temp 1.0 was already consistent, so the votes paid N× for nothing. Voting earns its keep only on genuinely uncertain/subjective tasks, weaker models, or high-recall guardrails ("flag if *any* of N flags"). Match the pattern to the task — same rule as Phase 3's self-critique.
+- **LangGraph is on 1.x, and the API moved (Ex 09).** We pulled `langgraph` 1.2.7 / `langchain-core` 1.x — newer than most training data. Two concrete bites: `BaseMessage.text` is now a **property**, not a method (`msg.text()` raises a `LangChainDeprecationWarning` — use `msg.text`); and imports are `from langgraph.graph import StateGraph, START, END, MessagesState` + `from langgraph.prebuilt import ToolNode, tools_condition`. We verified the current shape against live docs (Context7) rather than building from memory — the right move for any fast-moving framework.
